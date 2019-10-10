@@ -17,6 +17,7 @@ ClassMethod sum(A As %Integer = 0, B As %Integer = 0) As %Integer
 	set result = A + B
 	return result
 }
+///comment
 
 /// Print out Information
 Method Print() As %Status
