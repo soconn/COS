@@ -29,7 +29,7 @@ Method Print() As %Status
 
 /// Planet
 Parameter PLANET = "Earth";
-
+/// shoudl ahve been Mars
 Storage Default
 {
 <Data name="PersonDefaultData">
@@ -48,6 +48,8 @@ Storage Default
 </Data>
 <DataLocation>^Demo.PersonD</DataLocation>
 <DefaultData>PersonDefaultData</DefaultData>
+<Description>
+<![CDATA[shoudl ahve been Mars]]></Description>
 <IdLocation>^Demo.PersonD</IdLocation>
 <IndexLocation>^Demo.PersonI</IndexLocation>
 <StreamLocation>^Demo.PersonS</StreamLocation>
