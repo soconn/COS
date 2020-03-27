@@ -8,7 +8,7 @@ RUN mkdir -p /opt/app/src
 
 USER irisowner
 COPY src/* /opt/app/src/
-COPY irissession.sh /
+#COPY irissession.sh /
 #SHELL ["/irissession.sh"]
 
 RUN iris start $ISC_PACKAGE_INSTANCENAME quietly EmergencyId=sys,sys && \
