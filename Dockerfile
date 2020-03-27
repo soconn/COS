@@ -20,7 +20,6 @@ RUN iris start $ISC_PACKAGE_INSTANCENAME quietly EmergencyId=sys,sys && \
             " Do \$system.OBJ.Load(\"/opt/app/src/*\",\"ck\")\n" \
             " If 'sc do \$zu(4, \$JOB, 1)\n" \
             " write $zv" \
-            " write \". . .This is where I could do SmokeTests\" "
             " halt" \
     | iris session $ISC_PACKAGE_INSTANCENAME && \
     /bin/echo -e "sys\nsys\n" \
