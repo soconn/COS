@@ -1,0 +1,3305 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Export generator="Cache" version="25" zv="Cache for UNIX (Red Hat Enterprise Linux for x86-64) 2017.2.2 (Build 865_3_19231U)" ts="2020-03-26 09:24:44">
+<Class name="DocBook.Utils">
+<Description>
+Utility class</Description>
+<IncludeCode>%occSAX,DocBookMac</IncludeCode>
+<Super>%Library.RegisteredObject</Super>
+<TimeChanged>65254,45920</TimeChanged>
+<TimeCreated>58822,45005</TimeCreated>
+
+<Method name="Help">
+<Internal>1</Internal>
+<ClassMethod>1</ClassMethod>
+<Implementation><![CDATA[
+    Write $$$T("To load an xml file:"),!
+    Write "Do ##class(DocBook.Utils).Load(file)",!
+    Write !
+    Write $$$T("To load a book and related files:"),!
+    Write "Do ##class(DocBook.Utils).LoadBook(bookid)",!
+    Write !
+    Write $$$T("To load the entire Doc Set:"),!
+    Write "Do ##class(DocBook.Utils).LoadSets()",!
+]]></Implementation>
+</Method>
+
+<Method name="IsDeveloper">
+<Description>
+Returns 1 if the user has permission to access the class documentation</Description>
+<Internal>1</Internal>
+<ClassMethod>1</ClassMethod>
+<ReturnType>%Integer</ReturnType>
+<Implementation><![CDATA[    Quit ($system.Security.Check("%Development","use"))
+]]></Implementation>
+</Method>
+
+<Method name="IsISC">
+<Description>
+Returns 1 if the user has permission to access the class documentation</Description>
+<Internal>1</Internal>
+<ClassMethod>1</ClassMethod>
+<ReturnType>%Integer</ReturnType>
+<Implementation><![CDATA[    Quit (("," _ $ROLES _ ",") [ ",ISC_Internal,")
+]]></Implementation>
+</Method>
+
+<Method name="UsingJapanese">
+<Description>
+Returns 1 if we are dealing with Japanese text</Description>
+<Internal>1</Internal>
+<ClassMethod>1</ClassMethod>
+<ReturnType>%Integer</ReturnType>
+<Implementation><![CDATA[    Quit ($GET(^DocBook.Config("INDEXCLASS"), "empty")="DocBook.IndexedTextJ")
+]]></Implementation>
+</Method>
+
+<Method name="EnsembleLoaded">
+<Description>
+Checks to see if Ensemble is loaded in any accessible namespace</Description>
+<Internal>1</Internal>
+<ClassMethod>1</ClassMethod>
+<ReturnType>%Integer</ReturnType>
+<Implementation><![CDATA[
+    SET present = $GET(^DocBook.Config("ARCHITECTURES","ENSEMBLE"), 0)
+    Quit:(present > 0) 1
+    Quit:(##class(%Library.EnsembleMgr).IsEnsembleInstalled() > 0) 1
+    // test for faking it
+    //Quit:($DATA(^DocBook.Config("EnsembleLoaded")) > 0) $GET(^DocBook.Config("EnsembleLoaded"), 0)
+    // random edit
+    // nope
+    Quit 0
+]]></Implementation>
+</Method>
+
+<Method name="HealthShareLoaded">
+<Description>
+Checks to see if HealthShare is loaded in any accessible namespace</Description>
+<Internal>1</Internal>
+<ClassMethod>1</ClassMethod>
+<ReturnType>%Integer</ReturnType>
+<Implementation><![CDATA[
+    SET present = $GET(^DocBook.Config("ARCHITECTURES","HEALTHSHARE"), 0)
+                + $GET(^DocBook.Config("ARCHITECTURES","HSFOUNDATION"), 0)
+    Quit:(present > 0) 1
+    Quit:(##class(%Library.EnsembleMgr).IsHealthShareInstalled() > 0) 1
+    // test for faking it
+    //Quit:($DATA(^DocBook.Config("HealthShareLoaded")) > 0) $GET(^DocBook.Config("HealthShareLoaded"), 0)
+    // nope
+    Quit 0
+]]></Implementation>
+</Method>
+
+<Method name="TrakCareLoaded">
+<Description>
+Checks to see if TrakCare is loaded in any accessible namespace</Description>
+<Internal>1</Internal>
+<ClassMethod>1</ClassMethod>
+<ReturnType>%Integer</ReturnType>
+<Implementation><![CDATA[
+    SET present = $GET(^DocBook.Config("ARCHITECTURES","TRAKCARE"), 0)
+    Quit:(present > 0) 1
+    // This replicates the check in %Library.EnsembleMgr
+    // without the restriction of checking to see if it
+    // is enabled in the current namespace
+    Quit:($DATA(^%SYS("TrakCare")) > 0) 1
+    // test for faking it
+    //Quit:($DATA(^DocBook.Config("TrakCareLoaded")) > 0) $GET(^DocBook.Config("TrakCareLoaded"), 0)
+    // nope
+    Quit 0
+]]></Implementation>
+</Method>
+
+<Method name="ShowConfigSettings">
+<Description>
+Show the various configuration settings</Description>
+<ClassMethod>1</ClassMethod>
+<Implementation><![CDATA[
+    do ##class(DocBook.ConfigUtils).DisplayConfigParams()
+    quit
+]]></Implementation>
+</Method>
+
+<Method name="ProductDocLoaded">
+<ClassMethod>1</ClassMethod>
+<FormalSpec>producttocheck:%String=""</FormalSpec>
+<ReturnType>%Boolean</ReturnType>
+<Implementation><![CDATA[
+	if (producttocheck="") {
+		quit 0
+	}
+	/* uncomment this stuff for testing purposes
+	if ($$$UPPER(producttocheck)="TRAKCARE") {
+		quit 0
+	}
+	if ($$$UPPER(producttocheck)="HEALTHSHARE") {
+		quit 0
+	}
+	if ($$$UPPER(producttocheck)="ENSEMBLE") {
+		quit 0
+	}
+	*/
+	
+	set useproductinfofromdoc=0
+	if ($system.Version.GetNumber() >= 2017.1) {
+		&sql(select count(*) into :productcount from docbook.product)
+		if ((SQLCODE=0) && productcount>0){
+			set useproductinfofromdoc=1
+		}
+	}
+	if useproductinfofromdoc {
+		&sql(SELECT * FROM DocBook.block where product=:producttocheck)
+		if (SQLCODE=0) {
+			quit 1
+		} else {
+			quit 0
+		}
+	} elseif ($$$UPPER(producttocheck)="ENSEMBLE") {
+		quit ..EnsembleLoaded()
+	} elseif ($$$UPPER(producttocheck)="HEALTHSHARE") {
+		quit ..HealthShareLoaded()
+	} elseif ($$$UPPER(producttocheck)="TRAKCARE") {
+		quit ..TrakCareLoaded()
+	} else {
+		quit 0
+	}
+]]></Implementation>
+</Method>
+
+<Method name="ShowSearchDirs">
+<Description>
+Show the search paths available</Description>
+<ClassMethod>1</ClassMethod>
+<FormalSpec>main:cdata=""</FormalSpec>
+<ReturnType>%Status</ReturnType>
+<Implementation><![CDATA[
+    set dirlist = ##class(SearchUtils).BuildSearchList(main)
+    Set sc = $$$OK
+    If (dirlist.Count() = 0)
+    {
+        Write $$$T("Search directory list is empty"), !
+    }
+    Else
+    {
+        Write $$$T("Search directories: "), dirlist.Count(), !
+        For i = 1 : 1 : dirlist.Count()
+        {
+            Write i, "-", dirlist.GetAt(i), !
+        }
+    }
+    quit sc
+]]></Implementation>
+</Method>
+
+<Method name="GetMachineName">
+<Description>
+Show the search paths available</Description>
+<Internal>1</Internal>
+<ClassMethod>1</ClassMethod>
+<FormalSpec/>
+<ReturnType>%String</ReturnType>
+<Implementation><![CDATA[
+    Set sysname = $zu(54,13,$zu(54,0))
+    If ($LENGTH(sysname, ",") > 1)
+    {
+        If ($LENGTH($PIECE(sysname, ",", 2)) > 0)
+        {
+            Set sysname = $PIECE(sysname, ",", 2)
+        }
+        Else
+        {
+            Set sysname = $PIECE(sysname, ",", 1)
+        }
+    }
+    Quit sysname
+]]></Implementation>
+</Method>
+
+<Method name="CheckEncoding">
+<Description>
+Sieve out invalid encoding declarations</Description>
+<Internal>1</Internal>
+<ClassMethod>1</ClassMethod>
+<FormalSpec>filename:%String</FormalSpec>
+<ReturnType>%String</ReturnType>
+<Implementation><![CDATA[
+    // try to get the file
+    Open filename:("RS"):2 Else  Write "CheckEncoding: ", $$$T("Unable to open file: "), filename, ! QUIT "<MissingFofile>"
+    Set SaveIO=$io
+    Use filename
+    // get the first line
+    Read FirstLine:2
+    // swifth back no matter what the result
+    Use SaveIO
+    Close filename
+    // check what we got
+    Quit:(FirstLine [ "encoding=""UTF-8""") ""
+    Quit:(FirstLine [ "encoding=""utf-8""") ""
+    Quit FirstLine
+]]></Implementation>
+</Method>
+
+<Method name="Load">
+<Description>
+Load an individual doc file</Description>
+<ClassMethod>1</ClassMethod>
+<FormalSpec>file,validate:%Boolean=1</FormalSpec>
+<ReturnType>%Status</ReturnType>
+<Implementation><![CDATA[
+    Set sc = $$$OK
+    // !!!Force index to get rebuilt
+    Kill ^DocBook.Index
+    Set mask =  $$$SAXSTARTENTITY + $$$SAXENDENTITY + $$$SAXCONTENTEVENTS
+    If (##class(%XML.Catalog).IsEmpty()) {
+        Write $$$T("ERROR: DocBook.Utils:Load() The XML Catalog is empty."),!
+        Quit $$$ERROR($$$GeneralError,$$$T("XML Catalog Empty"))
+    }
+    If ('##class(%File).Exists(file)) {
+        Write $$$T("ERROR:"), " DocBook.Utils:Load() ", $$$T("File "), file, $$$T(" not found."),!
+        Quit $$$ERROR($$$GeneralError, ($$$T("File not found: ") _ file))
+    }
+    Set resolve = ##Class(%XML.CatalogResolver).%New()
+    Write $$$T("Loading: ") ,file, " ", !
+    Set enc = ..CheckEncoding(file)
+    If ($LENGTH(enc) > 0)
+    {
+        Write $$$T("----- Assertion Failure: "), $$$T("Unrecognized file encoding -- "), enc, !
+    }
+    If $D(%response) {
+        // assume we are called from CSP
+        Do %response.Flush()
+    }
+    Set h = ##Class(DocBookParser).%New()
+    Set fname = ##class(%File).GetFilename(file)
+    Set h.SourceFile = fname
+    Set h.SourceTime = $ZDT(##class(%File).GetFileDateModified(file),3)
+    // reset error log
+    Do ##class(ErrorLog).ResetForFile(fname)
+    Set sc = ##class(%XML.SAX.Parser).ParseFile(file, h, resolve, validate + $$$SAXNAMESPACES, mask)
+    If ($system.Status.IsError(sc))
+    {
+        Do $system.OBJ.DisplayError(sc)
+    }
+    If $D(%response) {
+        Write !
+        // assume we are called from CSP
+        Do %response.Flush()
+    }
+    ; clean up
+    Set resolve = ""
+    Set h = ""
+    Quit sc
+]]></Implementation>
+</Method>
+
+<Method name="Classify">
+<Description>
+Set up the material classificaton for the home page</Description>
+<ClassMethod>1</ClassMethod>
+<FormalSpec>verbose:%Boolean=0</FormalSpec>
+<ReturnType>%Status</ReturnType>
+<Implementation><![CDATA[
+    Do ##class(DocBook.Taxonomy).Define(verbose)
+    Do ##class(DocBook.Taxonomy).Check()
+    Quit $$$OK
+]]></Implementation>
+</Method>
+
+<Method name="CheckColoring">
+<Description>
+Invokes the class to list any coloring errors noted in the database</Description>
+<Internal>1</Internal>
+<ClassMethod>1</ClassMethod>
+<Implementation><![CDATA[
+    ; merely invoke the new class
+    Do ##class(DocBook.CheckColor).Main()
+    Quit
+]]></Implementation>
+</Method>
+
+<Method name="CheckWideChars">
+<Description>
+This method scans all the text for characters outside the range 0-255</Description>
+<Internal>1</Internal>
+<ClassMethod>1</ClassMethod>
+<Implementation><![CDATA[
+    ; there is no check to see if we are running on a Unicode system.
+    ;  If we are not, this will fail with a <WIDECHAR> error anyway.
+    Set Tick = 1000
+    Set Found = 0
+    Set MaxBlock = ^DocBook.blockD
+    Write !
+    Write $$$T("Scan for wide characters"), !
+    Write $$$T("Maximum block number: "), $FNUMBER(MaxBlock, ","), !
+    Set ErrPfx = $$$T("WARNING: Wide Char; ")
+    For Blk = 1 : 1 : MaxBlock
+    {
+        ;Write:((Blk # Tick) = 0) Blk, !
+        Set B = ##class(DocBook.block).%OpenId(Blk)
+        If (B '= $$$NULLOREF)
+        {
+            ;Write B.sourcefile, !
+            If ($ZISWIDE(B.title))
+            {
+                Set Found = Found + 1
+                Write ErrPfx, $$$T("File:"), " ", B.sourcefile, "; ", $$$T("Block:"), " ", Blk, !
+                Write $$$T("Title--"), !
+                Set B.title = ..ProcessWideChars(B.title)
+                ;Write B.title, !
+                Do B.%Save()
+            }
+            If ($ZISWIDE(B.content))
+            {
+                Set Found = Found + 1
+                Write ErrPfx, $$$T("File:"), " ", B.sourcefile, "; ", $$$T("Block:"), " ",  Blk, !
+                Write $$$T("Content--"), !
+                Set B.content = ..ProcessWideChars(B.content)
+                ;Write B.content, !
+                Do B.%Save()
+            }
+            If ($ZISWIDE(B.renderedContent))
+            {
+                Set Found = Found + 1
+                Write ErrPfx, $$$T("File:"), " ", B.sourcefile, "; ", $$$T("Block:"), " ",  Blk, !
+                Write $$$T("RenderedContent--"), !
+                Set B.renderedcontent = ..ProcessWideChars(B.renderedContent)
+                ;Write B.renderedcontent, !
+                Do B.%Save()
+            }
+        }
+        Set B = ""
+    }
+    Write:(Found '= 0) $$$T("Components found:"), " ", $FNUMBER(Found, ","), !
+    Write $$$T("Done"), !
+    Quit
+]]></Implementation>
+</Method>
+
+<Method name="ProcessWideChars">
+<Description>
+This method scans all the text for characters outside the range 0-255</Description>
+<Internal>1</Internal>
+<ClassMethod>1</ClassMethod>
+<FormalSpec>text:%String</FormalSpec>
+<ReturnType>%String</ReturnType>
+<Implementation><![CDATA[
+    Set Result = ""
+    For I = 1 : 1 : $LENGTH(text)
+    {
+        Set C = $EXTRACT(text, I, I)
+        If ($ZISWIDE(C))
+        {
+            Set Val = $ASCII(C)
+            Write $$$T("Position: "), I, "; ", $$$T("Value: "), Val, " (0x", $ZHEX(Val), ")", "; ", $$$T("Glyph: "), C, !
+            Set C = "?"
+        }
+        Set Result = Result _ C
+    }
+    Quit Result
+]]></Implementation>
+</Method>
+
+<Method name="DisplayWideChars">
+<Description>
+This method scans all the text for characters outside the range 0-255</Description>
+<Internal>1</Internal>
+<ClassMethod>1</ClassMethod>
+<FormalSpec>text:%String</FormalSpec>
+<Implementation><![CDATA[
+    For I = 1 : 1 : $LENGTH(text)
+    {
+        Set C = $EXTRACT(text, I, I)
+        If ($ZISWIDE(C))
+        {
+            Set Val = $ASCII(C)
+            Write $$$T("Position: "), I, "; ", $$$T("Value: "), Val, " (0x", $ZHEX(Val), ")", "; ", $$$T("Glyph: "), C, !
+        }
+    }
+    Quit
+]]></Implementation>
+</Method>
+
+<Method name="RebuildIndices">
+<Description>
+Rebuilds the indices for the database</Description>
+<Internal>1</Internal>
+<ClassMethod>1</ClassMethod>
+<FormalSpec>display:%Boolean=0</FormalSpec>
+<Implementation><![CDATA[
+    ; remove the old indexes
+    Kill ^DocBook.Index
+    Kill ^DocBook.Anchor
+    ; build the new ones
+    Write:(+display) !
+    Write:(+display) $$$T("Building Master Index: ")
+    Do ##class(DocBook.Utils).BuildIndex()
+    Write:(+display) "[", ##class(DocBook.Utils).CountGlobal("^DocBook.Index"), "] "
+    Write:(+display) "OK", !
+    Write:(+display) $$$T("Building Help Index: ")
+    Do ##class(DocBook.Utils).BuildAnchorIndex()
+    Write:(+display) "[", ##class(DocBook.Utils).CountGlobal("^DocBook.Anchor"), "] "
+    Write:(+display) "OK", !
+    quit
+]]></Implementation>
+</Method>
+
+<Method name="LoadSets">
+<Description>
+Reset and load the master documents.</Description>
+<ClassMethod>1</ClassMethod>
+<FormalSpec>main:cdata="",multiprocess:%Boolean=0,verbose:%Boolean=1</FormalSpec>
+<ReturnType>%Status</ReturnType>
+<Implementation><![CDATA[
+    // display the config settings
+    do ..ShowConfigSettings()
+    // if no directory provided, use search paths
+    do ..ShowSearchDirs(main)
+    set dirlist = ##class(SearchUtils).BuildSearchList(main)
+    Set sc = $$$OK
+    If (dirlist.Count() = 0) {
+        Write $$$T("Source Location not specified.")
+        Quit $$$ERROR($$$GeneralError,("DocBook.Utils:LoadSets() " _ $$$T("DocBook Source not specified")))
+    }
+    Set ^DocBook.OffLine = 1
+    Write $$$T("Resetting..."),!
+    Do ..Reset()
+    Do ..ResetLog()
+    Write $$$T("Building on "), ..GetBuildInfo(0), !
+    // Get Sets
+    Set filelist = ##class(SearchUtils).LocateFiles(dirlist, "SET*.xml")
+    If (filelist.Count() = 0)
+    {
+        Write $$$T("No sets found.")
+        Quit $$$ERROR($$$GeneralError,("DocBook.Utils:LoadSets() " _ $$$T("No SETs found.")))
+    }
+	Set queue=$system.WorkMgr.Initialize("d/multicompile="_multiprocess,.sc) If $$$ISERR(sc) Quit sc
+    For i = 1 : 1 : filelist.Count()
+    {
+        Set sc=queue.Queue("..Load",filelist.GetAt(i)) If $$$ISERR(sc) Return sc
+        If $get(^%SYS("DOCBOOK","KINGTUT")) Quit
+    }
+    Set filelist = ""
+    Set sc=queue.WaitForComplete() If $$$ISERR(sc) Quit sc
+    Kill ^DocBook.Config("ARCHITECTURES")
+    // Now load books referenced by sets
+    &sql(DECLARE BL CURSOR FOR
+         SELECT blockid INTO :bid FROM book)
+    &sql(OPEN BL)
+    &sql(FETCH BL)
+    If (SQLCODE '= 0)
+    {
+        Write $$$T("SQL Error finding first book:"), SQLCODE, !
+    }
+    While (SQLCODE = 0) {
+        Set bookdirlist = ##class(SearchUtils).ExtendSearchList(dirlist, bid)
+        Set filelist = ##class(SearchUtils).LocateFiles(bookdirlist, (bid _ ".xml"))
+        If (filelist.Count() > 0)
+        {
+            Set thefilepath = filelist.GetAt(1)
+            Set thedirpath = ##class(%File).GetDirectory(thefilepath)
+            Set loaddir = ##class(SearchUtils).ContainingDir(thedirpath)
+            Set sc=queue.Queue("..LoadBook",bid, loaddir,1) If $$$ISERR(sc) Return sc
+        }
+        &sql(FETCH BL)
+    }
+    &sql(CLOSE BL)
+    Set sc=queue.WaitForComplete() If $$$ISERR(sc) Return sc
+    // Load Articles
+    write !, " [Articles]", !
+    Set bookdirlist = ##class(SearchUtils).ExtendSearchList(dirlist, "Articles")
+    Set filelist = ##class(SearchUtils).LocateFiles(bookdirlist, "*.xml")
+    if (filelist.Count() > 0)
+    {
+        ; load each separately in case articles are in different directories
+        For i = 1 : 1 : filelist.Count()
+        {
+            Set thefilepath = filelist.GetAt(i)
+            Set sc=queue.Queue("..Load",thefilepath) If $$$ISERR(sc) Return sc
+            If $get(^%SYS("DOCBOOK","KINGTUT")) Quit
+        }
+    }
+    Set sc=queue.WaitForComplete() If $$$ISERR(sc) Quit sc
+    // (re)build infrastructure
+    Write !
+    Do ..CheckColoring()
+    Do:(##class(DocBook.ConfigUtils).GetWIDECHARCHECK()) ..CheckWideChars()
+    Do ..RebuildIndices(verbose)
+    Do ..AfterLoadSets(verbose)
+    Set sc = ..Classify(verbose)
+    Kill ^DocBook.OffLine
+    Set ^DocBook.LoadTime = $ZDT($H,3)
+    Quit sc
+]]></Implementation>
+</Method>
+
+<Method name="ReplaceSet">
+<Description>
+Replaces a set and its books.</Description>
+<ClassMethod>1</ClassMethod>
+<FormalSpec>setname:cdata="",main:cdata=""</FormalSpec>
+<ReturnType>%Status</ReturnType>
+<Implementation><![CDATA[
+    // if no directory provided, use search paths
+    do ..ShowSearchDirs(main)
+    set dirlist = ##class(SearchUtils).BuildSearchList(main)
+    Set sc = $$$OK
+    If (dirlist.Count() = 0) {
+        Write $$$T("Source Location not specified.")
+        Quit $$$ERROR($$$GeneralError,("DocBook.Utils:ReplaceSet() " _ $$$T("DocBook Source not specified")))
+    }
+    // Get Sets
+    Set SetName = setname _ ".xml"
+    Set filelist = ##class(SearchUtils).LocateFiles(dirlist,SetName)
+    If (filelist.Count() = 0)
+    {
+        Write "No set found."
+        Quit $$$ERROR($$$GeneralError,("DocBook.Utils:ReplaceSet() " _ $$$T("No SETs found.")))
+    }
+    If (filelist.Count() > 1)
+    {
+        Write "Duplicate sets found."
+        Quit $$$ERROR($$$GeneralError,("DocBook.Utils:ReplaceSet() " _ $$$T("Duplicate SETs found.")))
+    }
+    ; if there is a previously loaded set, remove it
+    set setblock = 0
+    &sql(DECLARE OLDSET CURSOR FOR
+         SELECT ID
+         INTO :setblock
+         FROM DocBook.db_set
+         WHERE blockid = :SetName)
+    &sql(OPEN OLDSET)
+    &sql(FETCH OLDSET)
+    if (SQLCODE = 0)
+    {
+        set deletestatus = ##class(DocBook.set).%DeleteId(setblock)
+        if (deletestatus '= $$$OK)
+        {
+            Quit $$$ERROR(deletestatus,("DocBook.Utils:ReplaceSet() " _ $$$T("Delete error.")))
+        }
+    }
+    &sql(CLOSE OLDSET)
+    Do ..Load(filelist.GetAt(1))
+    Set filelist = ""
+    ; now get the book directories
+    set articles = 0
+    set DirList = ##class(%Library.ResultSet).%New("%Library.File:FileSet")
+    set Pattern = "*"
+    set dirliststatus = DirList.Execute(main, Pattern, "", 1)
+    if (dirliststatus '= $$$OK)
+    {
+        Quit $$$ERROR(dirliststatus,("DocBook.Utils:ReplaceSet() " _ $$$T("FileSet error.")))
+    }
+    while (DirList.Next() '= 0)
+    {
+        set type = DirList.GetData(2)
+        if (type [ "D")
+        {
+            set BookName = DirList.GetData(6)
+            set BookPath = DirList.GetData(1)
+            ;write "BookName: ", BookName, !
+            ;write "BookPath: ", BookPath, !
+            ;write "Type: ", type, !
+            if ($ZCONVERT(BookName, "U") '[ "ARTICLES")
+            {
+                set loadstatus = ##class(DocBook.Utils).LoadBook(BookName, main)
+                if (loadstatus '= $$$OK)
+                {
+                    Quit
+                }
+            }
+        }
+    }
+    do DirList.Close()
+    set DirList = ""
+    write !, " [Articles]", !
+    Set bookdirlist = ##class(SearchUtils).ExtendSearchList(dirlist, "Articles")
+    Set filelist = ##class(SearchUtils).LocateFiles(bookdirlist, "*.xml")
+    if (filelist.Count() > 0)
+    {
+        ; load each separately in case articles are in different directories
+        For i = 1 : 1 : filelist.Count()
+        {
+            Set thefilepath = filelist.GetAt(i)
+            Do ..Load(thefilepath)
+        }
+    }
+    Set filelist = ""
+    ; now rebuild the indices
+    Write $$$T("Building Master Index: ")
+    Do ##class(DocBook.Utils).BuildIndex()
+    Write "[", ##class(DocBook.Utils).CountGlobal("^DocBook.Index"), "] "
+    Write "OK", !
+    Quit sc
+]]></Implementation>
+</Method>
+
+<Method name="LoadSet">
+<Description>
+Load (reload) a set.</Description>
+<ClassMethod>1</ClassMethod>
+<FormalSpec>setname:cdata="",main:cdata="",multiprocess:%Boolean=0</FormalSpec>
+<ReturnType>%Status</ReturnType>
+<Implementation><![CDATA[
+    // if no directory provided, use search paths
+    do ..ShowSearchDirs(main)
+    set dirlist = ##class(SearchUtils).BuildSearchList(main)
+    Set sc = $$$OK
+    If (dirlist.Count() = 0) {
+        Write $$$T("Source Location not specified.")
+        Quit $$$ERROR($$$GeneralError,("DocBook.Utils:LoadSets() " _ $$$T("DocBook Source not specified")))
+    }
+    // Get Sets
+    Set filelist = ##class(SearchUtils).LocateFiles(dirlist,(setname _ ".xml"))
+    If (filelist.Count() = 0)
+    {
+        Write $$$T("No set found.")
+        Quit $$$ERROR($$$GeneralError,("DocBook.Utils:LoadSet() " _ $$$T("No SETs found.")))
+    }
+    If (filelist.Count() > 1)
+    {
+        Write $$$T("Duplicate sets found.")
+        Quit $$$ERROR($$$GeneralError,("DocBook.Utils:LoadSet() " _ $$$T("Duplicate SETs found.")))
+    }
+	Set queue=$system.WorkMgr.Initialize("d/multicompile="_multiprocess,.sc) If $$$ISERR(sc) Quit sc
+    For i = 1 : 1 : filelist.Count() {
+        Set sc=queue.Queue("..Load",filelist.GetAt(i)) If $$$ISERR(sc) Return sc
+    }
+    Set filelist = ""
+    Set sc=queue.WaitForComplete() If $$$ISERR(sc) Quit sc
+    
+    // Find the blockid of the set we just loaded
+    // Find the set we just loaded
+    &sql(DECLARE SETLOADED CURSOR FOR
+         SELECT ID INTO :setid FROM book WHERE %SQLUPPER(blockid) = %SQLUPPER(:setname))
+    &sql(OPEN SETLOADED)
+    &sql(FETCH SETLOADED)
+    If (SQLCODE '= 0)
+    {
+        Write $$$T("Set ID not found.")
+        Quit $$$ERROR($$$GeneralError,("DocBook.Utils:LoadSet() " _ $$$T("Set ID not found.")))
+    }
+    &sql(CLOSE SETLOADED)
+    &sql(DECLARE SETBOOKS CURSOR FOR
+         SELECT blockid INTO :bid FROM book WHERE container = :setid)
+    &sql(OPEN SETBOOKS)
+    &sql(FETCH SETBOOKS)
+    While (SQLCODE = 0) {
+        Set bookdirlist = ##class(SearchUtils).ExtendSearchList(dirlist, bid)
+        Set filelist = ##class(SearchUtils).LocateFiles(bookdirlist, (bid _ ".xml"))
+        If (filelist.Count() > 0)
+        {
+            Set thefilepath = filelist.GetAt(1)
+            Set thedirpath = ##class(%File).GetDirectory(thefilepath)
+            Set loaddir = ##class(SearchUtils).ContainingDir(thedirpath)
+            Set sc=queue.Queue("..LoadBook",bid, loaddir,1) If $$$ISERR(sc) Return sc
+        }
+        &sql(FETCH SETBOOKS)
+    }
+    &sql(CLOSE SETBOOKS)
+    Set sc=queue.WaitForComplete() If $$$ISERR(sc) Quit sc
+    Quit sc
+]]></Implementation>
+</Method>
+
+<Method name="LoadBook">
+<Description>
+Load an entire book definition</Description>
+<ClassMethod>1</ClassMethod>
+<FormalSpec>book:cdata,subdir:cdata="",display:%Boolean=0</FormalSpec>
+<ReturnType>%Status</ReturnType>
+<Implementation><![CDATA[
+    If display Write !, " [" ,book, "]", !
+    // get places to look
+    set searchlist = ##class(SearchUtils).BuildSearchList(subdir)
+    set dirlist = ##class(SearchUtils).ExtendSearchList(searchlist, book)
+    Set sc = $$$OK
+    set filelist = ##class(SearchUtils).LocateFiles(dirlist, (book _ ".xml"))
+    If (filelist.Count() = 0)
+    {
+        Write $$$T("No book found: "), book, !
+        set sc =  $$$ERROR($$$GeneralError, ("DocBook.Utils:LoadBook() " _ $$$T("No book found: ") _ book))
+    }
+    else
+    {
+        set loaddir = ##class(%File).GetDirectory(filelist.GetAt(1))
+        do ..LoadMaster(loaddir)
+        Do ..LoadDir(loaddir)
+    }
+    Quit sc
+]]></Implementation>
+</Method>
+
+<Method name="LoadMaster">
+<Description>
+Load the master file for the given directory</Description>
+<ClassMethod>1</ClassMethod>
+<FormalSpec>subdir:cdata</FormalSpec>
+<ReturnType>%Status</ReturnType>
+<Implementation><![CDATA[
+    Set subdir = ##class(%File).NormalizeDirectory(subdir)
+    Set dirname = ##class(SearchUtils).GetDirectoryname(subdir)
+    set searchlist = ##class(SearchUtils).BuildSearchList(subdir)
+    set filelist = ##class(SearchUtils).LocateFiles(searchlist, (dirname _ ".xml"))
+    if (filelist.Count() > 0)
+    {
+        set sc = ..Load(filelist.GetAt(1))
+    }
+    else
+    {
+        //Write $$$T("ERROR:"), " DocBook.Utils:LoadMaster() ", $$$T("Book master not found: "), dirname, !
+        //set sc = $$$ERROR($$$GeneralError,$$$T("Book master file missing."))
+    }
+    Quit sc
+]]></Implementation>
+</Method>
+
+<Method name="LoadDir">
+<Description>
+Load every non-master file in the given directory</Description>
+<ClassMethod>1</ClassMethod>
+<FormalSpec>subdir:cdata</FormalSpec>
+<Implementation><![CDATA[
+    Set subdir = ##class(%File).NormalizeDirectory(subdir)
+    Set dir = ##class(%ResultSet).%New("%File.FileSet")
+    Do dir.Execute(subdir, "*.xml")
+    ; Write !
+    ; write "Subdir: ", subdir, !
+    While (dir.Next()) {
+        Set path = dir.GetData(1)
+        set file = ##class(%Library.File).GetFilename(path)
+        set dirpath = ##class(%Library.File).GetDirectory(path)
+        set dirname = ##class(SearchUtils).GetDirectoryname(dirpath)
+        ;write "Path: ", path, !
+        ;write "DirPath: ", dirpath, !
+        ;write "DirName: ", dirname, !
+        ;write "File: ", file, !
+        If ($ZCONVERT(file, "L") = ($ZCONVERT(dirname, "L") _ ".xml"))
+        {
+            ; Write $$$T("Master file already loaded: "), file, !
+        }
+        Else
+        {
+            ; Write path, !
+            Set sc = ..Load(path)
+        }
+    }
+    Quit $$$OK
+]]></Implementation>
+</Method>
+
+<Method name="RemoveArticle">
+<Description>
+Remove an article from the database</Description>
+<ClassMethod>1</ClassMethod>
+<FormalSpec>ArticleName:%String</FormalSpec>
+<ReturnType>%Status</ReturnType>
+<Implementation><![CDATA[
+    Set name = ArticleName
+    &sql(DECLARE THEARTICLE CURSOR FOR
+         SELECT ID
+         INTO :blockno
+         FROM DocBook.article
+         WHERE blockid = :name)
+    &sql(OPEN THEARTICLE)
+    &sql(FETCH THEARTICLE)
+    if (SQLCODE = 0)
+    {
+        Write $$$T("Deleting block: "), blockno, !
+        Do ##class(DocBook.article).%DeleteId(blockno)
+        set sc = $$$OK
+    }
+    else
+    {
+        Write $$$T("ERROR:"), " DocBook.Utils:RemoveArticle() - ", $$$T("No article by that name."),!
+        set sc = $$$ERROR($$$GeneralError,$$$T("No such article"))
+    }
+    &sql(CLOSE THEARTICLE)
+    quit sc
+]]></Implementation>
+</Method>
+
+<Method name="RemoveBook">
+<Description>
+Remove a book from the database</Description>
+<ClassMethod>1</ClassMethod>
+<FormalSpec>BookName:%String</FormalSpec>
+<ReturnType>%Status</ReturnType>
+<Implementation><![CDATA[
+    Set name = BookName
+    &sql(DECLARE THEBOOK CURSOR FOR
+         SELECT ID
+         INTO :blockno
+         FROM DocBook.book
+         WHERE blockid = :name)
+    &sql(OPEN THEBOOK)
+    &sql(FETCH THEBOOK)
+    if (SQLCODE = 0)
+    {
+        Write $$$T("Deleting block: "), blockno, !
+        Do ##class(DocBook.book).%DeleteId(blockno)
+        set sc = $$$OK
+    }
+    else
+    {
+        Write $$$T("ERROR: DocBook.Utils:RemoveBook()  - No book by that name."),!
+        set sc = $$$ERROR($$$GeneralError,$$$T("No such article"))
+    }
+    &sql(CLOSE THEBOOK)
+    quit sc
+]]></Implementation>
+</Method>
+
+<Method name="RemoveSet">
+<Description>
+Remove a set from the database</Description>
+<ClassMethod>1</ClassMethod>
+<FormalSpec>SetName:%String</FormalSpec>
+<ReturnType>%Status</ReturnType>
+<Implementation><![CDATA[
+    Set name = SetName
+    &sql(DECLARE THESET CURSOR FOR
+         SELECT ID
+         INTO :blockno
+         FROM DocBook.db_set
+         WHERE blockid = :name)
+    &sql(OPEN THESET)
+    &sql(FETCH THESET)
+    if (SQLCODE = 0)
+    {
+        Write $$$T("Deleting block: "), blockno, !
+        Do ##class(DocBook.set).%DeleteId(blockno)
+        set sc = $$$OK
+    }
+    else
+    {
+        Write $$$T("ERROR:"), " DocBook.Utils:RemoveBook()  - ", $$$T("No set by that name."),!
+        set sc = $$$ERROR($$$GeneralError,$$$T("No such set"))
+    }
+    &sql(CLOSE THESET)
+    quit sc
+]]></Implementation>
+</Method>
+
+<Method name="CheckProgramlistings">
+<Description>
+Loads the DocBook application</Description>
+<Internal>1</Internal>
+<ClassMethod>1</ClassMethod>
+<ReturnType>%Status</ReturnType>
+<Implementation><![CDATA[
+    Set MarkerBgn = "DLLResultCode:"
+    Set MarkerEnd = "-->"
+    Set SEP = "//"
+    // build the query to look for errors
+    Set SELECT = "SELECT ID, sourcefile, dblang, errorLang, renderedContent"
+    Set FROM = "FROM DocBook.programlisting"
+    Set WHERE = "WHERE ($FIND(renderedContent, '" _ MarkerBgn _ "') > 0)"
+    Set STMT = SELECT _ " " _ FROM _ " " _ WHERE
+    //Write "Stmt: ", SELECT, !, "..... ", FROM, !, "..... ", WHERE, !
+    Set RS = ##class(%Library.ResultSet).%New("%DynamicQuery:SQL")
+    Set sc = RS.Prepare(STMT)
+    If ($$$ISERR(sc))
+    {
+        Write $$$T("Error attempting to prepare query"), !
+        Do $SYSTEM.Status.DisplayError(sc)
+        Quit sc
+    }
+    Set sc = RS.Execute()
+    If ($$$ISERR(sc))
+    {
+        Write $$$T("Error attempting to execute query"), !
+        Do $SYSTEM.Status.DisplayError(sc)
+        Quit sc
+    }
+    Set ErrorTotal = 0
+    While (RS.Next())
+    {
+        Set ErrorTotal = ErrorTotal + 1
+        Set ThisID = $GET(RS.Data("ID"))
+        Set ThisFile = $GET(RS.Data("sourcefile"))
+        Set ThisLang = $GET(RS.Data("dblang"))
+        Set ThisErrLang = $GET(RS.Data("errorLang"))
+        Set ThisText = $GET(RS.Data("renderedContent"))
+        Set BgnInx = $FIND(ThisText, MarkerBgn)
+        Set EndInx = $FIND(ThisText, MarkerEnd) - $LENGTH(MarkerEnd)
+        Set MarkerData = $ZSTRIP($EXTRACT(ThisText, BgnInx, EndInx), "<>W")
+        Write ErrorTotal, SEP, ThisID, SEP, ThisFile, SEP, ThisLang, SEP, ThisErrLang, SEP, MarkerData, !
+    }
+    Quit $$$OK
+]]></Implementation>
+</Method>
+
+<Method name="XMLExport">
+<Description>
+ Export a document as an xml document</Description>
+<ClassMethod>1</ClassMethod>
+<FormalSpec>key:cdata,filename:cdata=""</FormalSpec>
+<Implementation><![CDATA[
+    // find element name for key
+    Set block = ##class(block).OpenKey(key)
+    If (block = "") {
+        Write "Utils:XMLExport() ", $$$T("Invalid key"),!
+        Quit
+    }
+    Set top = block.%ClassName()
+    If (filename '= "") {
+        Open filename:("WSN"):2 Else  Write $$$T("XML Export: Unable to open file: "),filename,! QUIT
+        Set io=$io
+        Use filename
+        // Set up correct file translation
+        Do $zu(96,18,2,"UTF8")
+    }
+    // XML header
+    Write "<?xml version=""1.0"" encoding=""UTF-8""?>",!
+    Write "<!DOCTYPE ",top," PUBLIC ""-//Arbortext//DTD DocBook XML V4.0//EN"" ""X:\doc\common\metadata\doctypes\axdocbook\axdocbook.dtd"">",!
+    // Now get block to render itself
+    Do block.XMLRender()
+    If (filename '= "") {
+        Use io
+        Close filename
+    }
+    quit
+]]></Implementation>
+</Method>
+
+<Method name="XMLExportAll">
+<Description>
+Extracts all books and articles as singleton XML files into the specified directory.</Description>
+<ClassMethod>1</ClassMethod>
+<FormalSpec>TargetDir:%String,Trace:%Boolean=0</FormalSpec>
+<ReturnType>%Status</ReturnType>
+<Implementation><![CDATA[
+    ; initialize the result
+    set filelist = ""
+    ; prepare the query
+    set ResultSet = ##class(%Library.ResultSet).%New("%Library.DynamicQuery:SQL")
+    if (ResultSet = "")
+    {
+        set errmsg = $$$T("Cannot allocate result set")
+        write errmsg, !
+        quit $$$ERROR($$$GeneralError, errmsg)
+    }
+    set QueryText = "SELECT ID, blockid, dbrole"
+    set QueryText = QueryText  _ " "
+    set QueryText = QueryText  _ "FROM DocBook.article"
+    set QueryText = QueryText  _ " "
+    set QueryText = QueryText  _ "UNION"
+    set QueryText = QueryText  _ " "
+    set QueryText =  QueryText  _ "SELECT ID, blockid, dbrole"
+    set QueryText = QueryText  _ " "
+    set QueryText = QueryText  _ "FROM DocBook.book"
+    set QueryText = QueryText  _ " "
+    set QueryText = QueryText   _ "ORDER BY blockid"
+    ; write QueryText, !
+    set Status = ResultSet.Prepare(QueryText)
+    if (Status = "")
+    {
+        do $system.OBJ.DisplayError(Status)
+        quit $$$ERROR($$$GeneralError,$$$T("Error compiling extract query"))
+    }
+    ; apply it
+    set SQLCODE = 0
+    do ResultSet.Execute()
+    if (SQLCODE '= 0)
+    {
+        write !, $$$T("SQLCODE = "), SQLCODE
+        quit $$$ERROR($$$GeneralError,$$$T("Error executing extract query"))
+    }
+    ; iterate over the items
+    while (ResultSet.Next(.status))
+    {
+        if ($$$ISERR(status))
+        {
+            write $$$ERROR($$$GeneralError,$$$T("Error returning loaded documents"))
+            quit
+        }
+        ; get the book name
+        set itemid = ResultSet.Get("ID")
+        set itemname = ResultSet.Get("blockid")
+        set itemrole = ResultSet.Get("dbrole")
+        set keepflag = ('((itemname = "") || ($ZCONVERT(itemrole, "L") = "tutorial")))
+        ; append the new name
+        set:(keepflag) filelist = filelist _ $LISTBUILD(itemname)
+    }
+    ; finished
+    do ResultSet.Close()
+    set ResultSet = ""
+    ; create the output direcory
+    set targetdir = ##class(%Library.File).NormalizeDirectory(TargetDir)
+    if ('(##class(%Library.File).CreateDirectoryChain(targetdir)))
+    {
+        set errmsg = $$$T("Cannot create output directory: ") _ targetdir
+        write errmsg, !
+        quit $$$ERROR($$$GeneralError, errmsg)
+    }
+    for i = 1 : 1 : $LISTLENGTH(filelist)
+    {
+        set name = $LIST(filelist, i)
+        set outputfile = targetdir _ name _ ".xml"
+        write:(Trace) $$$T("Export: "), name, !
+        do ..XMLExport(name, outputfile)
+    }
+    ;done
+    quit $$$OK
+]]></Implementation>
+</Method>
+
+<Method name="Reset">
+<Description>
+Clear the entire DocBook database.</Description>
+<Internal>1</Internal>
+<ClassMethod>1</ClassMethod>
+<Implementation><![CDATA[
+    Kill ^DocBook.blockD
+    Kill ^DocBook.blockI
+    Kill ^DocBook.blockID
+    Kill ^DocBook.OffLine
+    Kill ^DocBook.LoadTime
+    Kill ^DocBook.ErrorLogD
+    Do ..ResetIndex()
+]]></Implementation>
+</Method>
+
+<Method name="ResetIndex">
+<Description>
+Clear the Master Index list.</Description>
+<Internal>1</Internal>
+<ClassMethod>1</ClassMethod>
+<Implementation><![CDATA[    Kill ^DocBook.Index
+]]></Implementation>
+</Method>
+
+<Method name="ResetLog">
+<Description>
+Clear the contents of the error log.</Description>
+<Internal>1</Internal>
+<ClassMethod>1</ClassMethod>
+<Implementation><![CDATA[    Do ##class(ErrorLog).Reset()
+]]></Implementation>
+</Method>
+
+<Method name="ShowLog">
+<Description>
+Display the error log</Description>
+<ClassMethod>1</ClassMethod>
+<Implementation><![CDATA[    Do ##class(ErrorLog).List()
+]]></Implementation>
+</Method>
+
+<Method name="RenderContainer">
+<Internal>1</Internal>
+<ClassMethod>1</ClassMethod>
+<FormalSpec>cid:cdata,indent:%Integer=0</FormalSpec>
+<Implementation><![CDATA[
+    // find child blocks
+    &sql(DECLARE C1 CURSOR FOR
+         SELECT ID,content,x__classname
+         INTO :bid,:content,:cls
+         FROM block
+         WHERE container = :cid
+         ORDER BY blockpos
+    )
+    &sql(OPEN C1)
+    &sql(FETCH C1)
+    Write ?indent,bid,!
+    While (SQLCODE = 0) {
+        Do ..RenderContainer(bid,indent+5)
+        &sql(FETCH C1)
+    }
+    &sql(CLOSE C1)
+]]></Implementation>
+</Method>
+
+<Method name="CheckLinks">
+<Description>
+Check all links within the documentation database
+Returns (by reference) the number of links,
+the number of badlinks, and the targets of all bad
+links (in an array subscripted by link #).</Description>
+<ClassMethod>1</ClassMethod>
+<FormalSpec><![CDATA[&total:%Integer,&bad:%Integer,&badlist:%String,&static:%Integer,&staticlist:%String,silent:%Boolean=1]]></FormalSpec>
+<Implementation><![CDATA[
+    // search text for links
+    // disable olink checking
+    //&sql(DECLARE LinkCursor CURSOR FOR
+    //        SELECT ID, blockid, content, sourceFile
+    //        INTO    :id ,:key, :text , :src
+    //        FROM DocBook.block
+    //        WHERE (content [ '<ulink') OR (content [ '<olink') )
+    &sql(DECLARE LinkCursor CURSOR FOR
+            SELECT ID, blockid, content, sourceFile
+            INTO    :id ,:key, :text , :src
+            FROM DocBook.block
+            WHERE (content [ '<ulink'))
+    &sql(OPEN LinkCursor)
+    &sql(FETCH LinkCursor)
+    Set total = 0
+    Set bad = 0
+    Set row = 1
+    While (SQLCODE = 0) {
+        Write:'silent !,$$$T("Checking: "),key," "
+        Do ..CheckLinksInText(src,text,.total,.bad,.badlist,.static,.staticlist,silent)
+        &sql(FETCH LinkCursor)
+        Set row = row + 1
+    }
+    &sql(CLOSE LinkCursor)
+    If ('silent) {
+        // write report
+        If (bad > 0) {
+            Write !,"------------------",!
+            Write $$$T("BAD LINKS:"),!
+            For i = 1:1:bad {
+                Write ?5,$LG(badlist(i),1),?30,$LG(badlist(i),2),!
+            }
+        }
+        Write !,"------------------",!
+        Write $$$T("Links:     "),total,!
+        Write $$$T("Bad Links: "),bad,!
+    }
+]]></Implementation>
+</Method>
+
+<Method name="CheckLinksInText">
+<Description>
+Checks a block of text for bad links;</Description>
+<Internal>1</Internal>
+<ClassMethod>1</ClassMethod>
+<FormalSpec><![CDATA[src:%String,txt:%String,&total:%Integer,&bad:%Integer,&badlist:%String,&static:%Integer,&staticlist:%String,silent:%Boolean=1]]></FormalSpec>
+<Implementation><![CDATA[
+    // we assume that text has a link in it
+    // or else we would not be here.
+    Set tokens = ##class(%CSP.TokenStream).%New()
+    Do tokens.OpenFromString(txt)
+    While (tokens.NextToken()) {
+        Set url = ""
+        If (tokens.Tag = "ulink") {
+            Set attrs = ""
+            Do tokens.GetAttrs(.attrs)
+            // 'url' attribute of ulink tag contains link
+            Set url = $G(attrs("url","value"))
+        }
+        //ElseIf (tokens.Tag = "olink") {
+        //    Set attrs = ""
+        //    Do tokens.GetAttrs(.attrs)
+        //    // 'type' attribute of olink tag contains link
+        //    Set url = $G(attrs("type","value"))
+        //}
+        Set url = $ZCONVERT(url, "I", "HTML")
+        If (url '= "") {
+            If ((url [ "http:") || (url [ "https:") || (url [ "ftp:") || (url [ ".html") || (url [ "www.") || (url [ ".htm") || (url [ ".cls") || (url [ ".csp")) {
+                // not an internal link
+                Set static = static + 1
+                Set staticlist(static) = $LB(src,url)
+            }
+            Else {
+                Set total = total + 1
+                // test this link
+                Set id = ##class(DocBook.block).FindId(url)
+                If ((id = "") && ($ZCVT(url,"U") '= "KNBASE")) {
+                    Write:'silent "*"
+                    Set bad = bad + 1
+                    Set badlist(bad) = $LB(src,url)
+                }
+            }
+        }
+    }
+]]></Implementation>
+</Method>
+
+<Method name="BuildAnchorIndex">
+<Description>
+Create an index in the ^DocBook.Anchor global</Description>
+<Internal>1</Internal>
+<ClassMethod>1</ClassMethod>
+<Implementation><![CDATA[
+    //clear any existing index
+    Kill ^DocBook.Anchor
+    // iterate over all that are defined
+    &sql(DECLARE ANCHORC CURSOR FOR
+        SELECT ID, blockid, target
+        INTO :blocknum, :blockid, :target
+        FROM DocBook.anchor)
+    &sql(OPEN ANCHORC)
+    &sql(FETCH ANCHORC)
+    While (SQLCODE = 0)
+    {
+        Set subs = ##class(DocBook.PortalUtils).FormatSubscript(target)
+        Set ref = "^DocBook.Anchor" _ "(" _ subs _ ")"
+        If (subs  = """""")
+        {
+            Write $$$T("Empty subscript at block "), blocknum, "; ", $$$T("id "), blockid, !
+        }
+        Else
+        {
+            Set @ref = blockid
+        }
+        Set lastchr = $EXTRACT(blockid, *)
+        Set suffix = "_anchor"
+        If ("0123456789" [ lastchr)
+        {
+            Set suffix = suffix _ lastchr
+        }
+        Set refblock = $REPLACE(blockid, suffix, "")
+        Set refobj = ##class(DocBook.block).FindId(refblock)
+        If (refobj = "")
+        {
+            Write $$$T("Warning: Missing anchor reference: "), refblock,!
+        }
+        &sql(FETCH ANCHORC)
+    }
+    &SQL(CLOSE ANCHORC)
+]]></Implementation>
+</Method>
+
+<Method name="BuildIndex">
+<Description>
+Create an index in the ^DocBook.Index global</Description>
+<Internal>1</Internal>
+<ClassMethod>1</ClassMethod>
+<Implementation><![CDATA[
+    // clear index
+    Kill ^DocBook.Index
+    Set ^DocBook.IndexTime = $zdt($H,3)
+    // first get list of titles (books, chapters, etc)
+    &sql(DECLARE ABIT CURSOR FOR
+        SELECT blockid, title , component->blockid, x__classname, book->title
+        INTO :blockid, :title, :dockey, :xcls, owner
+        FROM DocBook.component)
+    &sql(OPEN ABIT)
+    &sql(FETCH ABIT)
+    While (SQLCODE = 0) {
+        If (title '= "") {
+            // pull out classname
+            Set type = $P(xcls,"~",$L(xcls,"~")-1)
+            Set type = $P(type,".",$L(type,"."))
+	        if ..Indexable(title) {
+    	    	Do ..AddEntry(title,type,blockid,dockey,owner)
+        	}
+        }
+        &sql(FETCH ABIT)
+    }
+    &sql(CLOSE ABIT)
+    // now get list of sect1 titles
+    &sql(DECLARE BIS1 CURSOR FOR
+        SELECT blockid, title , component->blockid, book->title
+        INTO :blockid, :title, :dockey, owner
+        FROM DocBook.sect1)
+    &sql(OPEN BIS1)
+    &sql(FETCH BIS1)
+    While (SQLCODE = 0) {
+        If ..Indexable(title) {
+            Do ..AddEntry(title,"sect1",blockid,dockey,owner)
+        }
+        &sql(FETCH BIS1)
+    }
+    &sql(CLOSE BIS1)
+ 
+    // now get list of sect2 titles
+    // AAH820 
+    /*
+    &sql(DECLARE BIS2 CURSOR FOR
+        SELECT blockid, title , component->blockid, book->title
+        INTO :blockid, :title, :dockey, owner
+        FROM DocBook.sect2)
+    &sql(OPEN BIS2)
+    &sql(FETCH BIS2)
+    While (SQLCODE = 0) {
+        If ..Indexable(title) {
+            Do ..AddEntry(title,"sect2",blockid,dockey,owner)
+        }
+        &sql(FETCH BIS2)
+    }
+    &sql(CLOSE BIS2)
+    */
+    // now get list of glossary terms
+    //AAH818 - most glossary terms are not definitions per se, so having these in the index
+    //is not helpful to customers
+    /*
+    &sql(DECLARE BIG CURSOR FOR
+        SELECT blockid,glossterm,component->blockid,book->title
+        INTO :blockid, :title, :dockey, :owner
+        FROM DocBook.glossentry)
+    &sql(OPEN BIG)
+    &sql(FETCH BIG)
+    While (SQLCODE = 0) {
+        If ..Indexable(title) {
+            Do ..AddEntry(title,"glossentry",blockid,dockey,owner)
+        }
+        &sql(FETCH BIG)
+    }
+    &sql(CLOSE BIG)
+    */
+     // now get list of marked index entries
+    // find candidate blocks
+    &sql(DECLARE BII CURSOR FOR
+        SELECT content,blockid,component->blockid,book->title
+        INTO :text,:blockid,:dockey,:owner
+        FROM DocBook.block
+        WHERE (content [ '<indexterm'))
+    &sql(OPEN BII)
+    &sql(FETCH BII)
+    While (SQLCODE = 0) {
+        If ($ZSTRIP(text,"<>W") '= "") {
+            Do ..AddMarkedEntry(text,blockid,dockey,owner)
+        }
+        &sql(FETCH BII)
+    }
+    &sql(CLOSE BII)
+    // AAH820 added this part
+    // now get list of first terms
+    // find candidate blocks
+    &sql(DECLARE BFT CURSOR FOR
+        SELECT content,blockid,component->blockid,book->title
+        INTO :text,:blockid,:dockey,:owner
+        FROM DocBook.block
+        WHERE content [ '<firstterm' )
+    &sql(OPEN BFT)
+    &sql(FETCH BFT)
+    While (SQLCODE = 0) {
+        If ($ZSTRIP(text,"<>W") '= "") {
+            Do ..AddFirstTermEntry(text,blockid,dockey,owner)
+        }
+        &sql(FETCH BFT)
+    }
+    &sql(CLOSE BFT)
+]]></Implementation>
+</Method>
+
+<Method name="Indexable">
+<ClassMethod>1</ClassMethod>
+<FormalSpec>title:%String=""</FormalSpec>
+<Implementation><![CDATA[
+	set title=$$$UPPER($ZSTRIP(title,"<>W"))
+	if (title="") {
+		quit 0
+	} elseif (title="ABOUT THIS BOOK") {      
+		quit 0
+	} elseif (title="SEE ALSO") {
+		quit 0
+	} elseif (title="OVERVIEW") {
+		quit 0
+	} elseif (title="INTRODUCTION") {
+		quit 0
+	} elseif (title="EXAMPLE") {
+		quit 0
+	} elseif (title="EXAMPLES") {
+		quit 0
+	} elseif (title="FOR MORE INFORMATION") {
+		quit 0
+	} elseif (title="BASICS") {
+		quit 0
+	} else {
+		quit 1
+	}
+]]></Implementation>
+</Method>
+
+<Method name="AddEntry">
+<Description>
+Add an entry to the index global.</Description>
+<Internal>1</Internal>
+<ClassMethod>1</ClassMethod>
+<FormalSpec>title,source,blockid,dockey,owner=""</FormalSpec>
+<Implementation><![CDATA[
+    // first remove any leading articles;
+    // (this is English-specific)
+    Set fword = $P(title," ",1)
+    If (",A,AN,THE," [ ("," _ $ZCVT(fword,"U") _ ",")) {
+        Set title = $P(title," ",2,$L(title," ")) _ ", " _ fword
+    }
+    // collate title
+    // !!! hack for leading "<"
+    Set ctitle = title
+    If ($E(ctitle,1,4) = "&lt;") {
+        Set ctitle = $E(ctitle,5,*)
+    }
+    // strip whitespace
+    // !!! this strips too much white space: Set ctitle = " "_$zcvt($zstrip(ctitle,"*P"),"U")
+    //AAH987 
+    Set ctitle = " "_$zcvt(ctitle,"U")
+    If ($LENGTH(ctitle) > 250)
+    {
+        Write "Cannot index blockid ", blockid, "; len = ", $LENGTH(ctitle), "; value[", ctitle, "]", !
+        Quit
+    }
+    Set n = 1 + $Order(^DocBook.Index(ctitle,""),-1)
+    If (dockey = "") {
+        Set link = "KEY=" _ blockid
+    }
+    Else {
+        Set link = "KEY=" _ dockey _ "#" _ blockid
+    }
+    Set ^DocBook.Index(ctitle,n) = $LB(title,link,source,owner)
+]]></Implementation>
+</Method>
+
+<Method name="AddMarkedEntry">
+<Description>
+Search the text and find the index entries in it.</Description>
+<Internal>1</Internal>
+<ClassMethod>1</ClassMethod>
+<FormalSpec>text,blockid,dockey,owner=""</FormalSpec>
+<Implementation><![CDATA[
+    // Scan for the index terms 
+    Set bgntag = "<indexterm"
+    Set endtag = "</indexterm"
+    Set closure = ">"
+    Set termlist = ""
+    Set f1 = 0
+    While (1)
+    {
+        Set f1 = $FIND(text, bgntag, f1)
+        Quit:(f1 = 0)
+        Set termbgn = f1 - $LENGTH(bgntag)
+        Set f2 = $FIND(text, endtag, f1)
+        Set termend = $FIND(text, closure, f2)
+        Set holder = $EXTRACT(text, termbgn, (termend -1))
+        ; Write "Fragment: ", holder, !
+        ; remove any <indexterm> containing a <see> or <seealso>
+        if ('((holder [ "<see") || (holder [ "<seealso")))
+        {
+            Set termlist = termlist _ $LISTBUILD(holder)
+        }
+        Set f1 = termend
+    }
+    If ($LISTLENGTH(termlist) > 0)
+    {
+        ; Write "Terms: ", $LISTLENGTH(termlist), !
+        For n = 1 : 1 : $LISTLENGTH(termlist)
+        {
+            Set text = $LIST(termlist, n)
+            ; Write "Text: ", text, !
+            // Remove the seealso and see references (in that order)
+            For tag = "seealso", "see"
+            {
+                Set f1 = 0
+                While (1)
+                {
+                    Set f1 = $FIND(text, ("<" _ tag), f1)
+                    Quit:(f1 = 0)
+                    ; Write text, !
+                    Set f1 = f1 - $LENGTH(tag) - 1
+                    Set f2 = $FIND(text, ("</" _ tag _ ">"), f1)
+                    Set $EXTRACT(text, f1, (f2 - 1)) = ""
+                }
+            }
+            ; Write "See/Seealso: ", text, !
+            // Change the secondary and tertiary terms (in that order)
+            Set holder = ""
+            For tag = "secondary", "tertiary"
+            {
+                Set f1 = 0
+                While (1)
+                {
+                    Set scanner = "<" _ tag
+                    Set f1 = $FIND(text, scanner, f1)
+                    Quit:(f1 = 0)
+                    ; Write text, !
+                    Set f1 = f1 - $LENGTH(scanner)
+                    Set bgntext = $FIND(text, ">", f1)
+                    Set scanner = "</" _ tag _ ">"
+                    Set f2 = $FIND(text, scanner, bgntext)
+                    Set endtext = f2 - $LENGTH(scanner) - 1
+                    ; Write "Found: ", $EXTRACT(text, bgntext, endtext), !
+                    Set holder = holder _ " &raquo; " _ $EXTRACT(text, bgntext, endtext)
+                    Set $EXTRACT(text, f1, (f2 - 1)) = ""
+                    ; Write "Holder: ", holder, !
+                    ; Write tag, ": ", text, !
+                }
+            }
+            // Now extract the primary reference
+            Set tag = "primary"
+            Set f1 = 0
+            While (1)
+            {
+                Set f1 = $FIND(text, ("<" _ tag), f1)
+                Quit:(f1 = 0)
+                Set f1 = f1 - $LENGTH(tag) - 1
+                Set bgntext = $FIND(text, ">", f1)
+                Set f2 = $FIND(text, ("</" _ tag _ ">"), bgntext)
+                Set endtext = f2 - $LENGTH(tag) - 3 - 1
+                Set key = $EXTRACT(text, bgntext, endtext) _ holder
+                ; Write "==> ", key, !
+                Do ..AddEntry(key,"indexterm",blockid,dockey,owner)
+                Set f1 = f2
+                Set holder = ""
+            }
+        }
+    }
+    Quit
+]]></Implementation>
+</Method>
+
+<Method name="AddFirstTermEntry">
+<Description>
+Search the text and find the first terms in it.</Description>
+<Internal>1</Internal>
+<ClassMethod>1</ClassMethod>
+<FormalSpec>text,blockid,dockey,owner=""</FormalSpec>
+<Implementation><![CDATA[
+    //AAH820 -- added this method
+    // Scan for the first terms
+    Set bgntag = "<firstterm"
+    Set endtag = "</firstterm"
+   
+    Set closure = ">"
+    Set termlist = ""
+    Set f1 = 0
+    While (1)
+    {
+        Set f1 = $FIND(text, bgntag, f1)
+        Quit:(f1 = 0)
+        Set termbgn = f1 - $LENGTH(bgntag)
+        Set f2 = $FIND(text, endtag, f1)
+        Set termend = $FIND(text, closure, f2)
+        Set holder = $EXTRACT(text, termbgn, (termend -1))
+        set newfrag=$REPLACE(holder,bgntag_closure,"")
+        set newfrag2=$REPLACE(newfrag,endtag_closure,"")
+        set cleanfrag=$ZSTRIP(newfrag2,"<>P")
+        Do ..AddEntry(cleanfrag,"firstterm",blockid,dockey,owner)
+        //Write "Fragment: ", cleanfrag, !
+        Set f1 = termend
+    }
+]]></Implementation>
+</Method>
+
+<Method name="CountGlobal">
+<Description>
+Counts the number of members in the global</Description>
+<Internal>1</Internal>
+<ClassMethod>1</ClassMethod>
+<FormalSpec>GlobName:%String</FormalSpec>
+<ReturnType>%Integer</ReturnType>
+<Implementation><![CDATA[
+    Set Cnt = 0
+    Set Sub = ""
+    Set Ref = $QUERY(@GlobName@(Sub))
+    While (Ref '= "")
+    {
+        Set Cnt = Cnt + 1
+        Set Ref = $QUERY(@Ref)
+    }
+    Quit Cnt
+]]></Implementation>
+</Method>
+
+<Method name="Colorize">
+<Description>
+Syntax color all the programlisting blocks</Description>
+<Internal>1</Internal>
+<ClassMethod>1</ClassMethod>
+<Implementation><![CDATA[
+    &sql(DECLARE CC CURSOR FOR
+        SELECT ID
+        INTO :id
+        FROM DocBook.programlisting
+        WHERE dblang IS NOT NULL
+    )
+    &sql(OPEN CC)
+    &sql(FETCH CC)
+    Set count = 0
+    Write $$$T("Colorizing...")
+    While (SQLCODE = 0) {
+        Set count = count + 1
+        Set block = ##class(programlisting).%OpenId(id)
+        Do block.Colorize()
+        Do block.%Save()
+        &sql(FETCH CC)
+    }
+    Write !,count,$$$T(" blocks colorized."),!
+    &sql(CLOSE CC)
+]]></Implementation>
+</Method>
+
+<Method name="ExecuteSample">
+<Description>
+Execute the given sample program (assuming this is called
+from a CSP page)</Description>
+<Internal>1</Internal>
+<ClassMethod>1</ClassMethod>
+<FormalSpec>content:%String,lang:%String</FormalSpec>
+<ReturnType>%Status</ReturnType>
+<Implementation><![CDATA[
+    If (lang = "COS") {
+        &html<<DIV CLASS="OUTPUT">>
+        Set sc = ..ExecuteCOS(content)
+        &html<</DIV>>
+    }
+    ElseIf (lang = "BAS") {
+        &html<<DIV CLASS="OUTPUT">>
+        Set sc = ..ExecuteBAS(content)
+        &html<</DIV>>
+    }
+    ElseIf (lang = "CSP") {
+        &html<<DIV CLASS="OUTPUT">>
+        Set sc = ..ExecuteCSP(content)
+        &html<</DIV>>
+    }
+    ElseIf (lang = "SQL") {
+        Set sc = ..ExecuteSQL(content)
+    }
+    Else {
+        Set sc = $$$OK
+    }
+    Quit sc
+]]></Implementation>
+</Method>
+
+<Method name="ExecuteCOS">
+<Description>
+Execute a COS example</Description>
+<Internal>1</Internal>
+<ClassMethod>1</ClassMethod>
+<FormalSpec>code:%String</FormalSpec>
+<ReturnType>%Status</ReturnType>
+<Implementation><![CDATA[
+    // execute in SAMPLES namespace
+    Set zn = $zu(5)
+    Set x = $zu(5,"SAMPLES")
+    Set routine = ##class(%Routine).%New("DocBook.EXECTemp1COS.MAC")
+    // Write lines of code to the routine
+    Do routine.WriteLine("EXECTemp1COS ;"_$ZDT($H,3))
+    // UNIX nonsense!
+    Set code = $TR(code,$C(13),"")
+    // get rid of HTML escapes
+    Set code = $ZCVT(code,"I","HTML")
+    For ln = 1:1:$L(code,$C(10)) {
+        Do routine.WriteLine($P(code,$C(10),ln))
+    }
+    Do routine.WriteLine("")
+    Do routine.WriteLine(" QUIT")
+    Write "<PRE>"
+    // save the routine
+    Do routine.Save()
+    // compile the routine (with no output)
+    Set sc = routine.Compile("-d")
+    If ($$$ISERR(sc)) {
+        Do $system.OBJ.DisplayError(sc)
+    }
+    Else {
+        // save current translate table
+        //Set iomode = $zu(96, 18, 0)
+        // translate output using HTML escapes
+        //Do $zu(96, 18, 2, "HTML")
+        // execute the new routine
+        Do ^DocBook.EXECTemp1COS
+        // restore translate table
+        //Do $zu(96, 18, 2, iomode)
+    }
+    Write "</PRE>"
+    // restore old namespace
+    Set x = $zu(5,zn)
+    Quit $$$OK
+]]></Implementation>
+</Method>
+
+<Method name="ExecuteBAS">
+<Description>
+Execute a BASic example</Description>
+<Internal>1</Internal>
+<ClassMethod>1</ClassMethod>
+<FormalSpec>code:%String</FormalSpec>
+<ReturnType>%Status</ReturnType>
+<Implementation><![CDATA[
+    // execute in SAMPLES namespace
+    Set zn = $zu(5)
+    Set x = $zu(5,"SAMPLES")
+    Set routine = ##class(%Routine).%New("DocBook.EXECTemp1BAS.BAS")
+    // Write lines of code to the routine
+    Do routine.WriteLine("' EXECTemp1BAS "_$ZDT($H,3))
+    // UNIX nonsense!
+    Set code = $TR(code,$C(13),"")
+    // get rid of HTML escapes
+    Set code = $ZCVT(code,"I","HTML")
+    For ln = 1:1:$L(code,$C(10)) {
+        Do routine.WriteLine($P(code,$C(10),ln))
+    }
+    Write "<PRE>"
+    // save the routine
+    Do routine.Save()
+    // compile the routine
+    Set sc = routine.Compile("-d")
+    If ($$$ISERR(sc)) {
+        Do $system.OBJ.DisplayError(sc)
+    }
+    Else {
+        // execute the new routine
+        Do ^DocBook.EXECTemp1BAS
+    }
+    Write "</PRE>"
+    // restore old namespace
+    Set x = $zu(5,zn)
+    Quit $$$OK
+]]></Implementation>
+</Method>
+
+<Method name="ExecuteSQL">
+<Description>
+Execute an SQL example</Description>
+<Internal>1</Internal>
+<ClassMethod>1</ClassMethod>
+<FormalSpec>code:%String</FormalSpec>
+<ReturnType>%Status</ReturnType>
+<Implementation><![CDATA[
+    // execute in SAMPLES namespace
+#dim x,zn As %String
+#dim i,splitSQL As %Integer
+    Set zn = $zu(5)
+    Set x = $zu(5,"SAMPLES")
+    Set routine = ##class(%Routine).%New("DocBook.EXECTemp1COS.MAC")
+    // Write lines of code to the routine
+    Do routine.WriteLine("EXECTemp1COS ;"_$ZDT($H,3))
+    // convert CR to spaces
+    if code[$c(13,10),code["--" { set splitSQL=1 }
+    else { Set splitSQL=0, code = $TR(code,$C(13,10),"  ") }
+    // get rid of HTML escapes
+    Set code = $ZCVT(code,"I","HTML")
+    // write code to execute query
+    if splitSQL {
+        Do routine.WriteLine(" New query,sc,col,cols,data,sql")
+        Do routine.WriteLine(" Set query = ##class(%ResultSet).%New()")
+        for i=1:1:$l(code,$c(13,10)) {
+            Do routine.WriteLine($s(i=1:" Set sql="_$l(code,$c(13,10)),1:"")_" Set sql("_i_") = "_$zu(144,1,$p(code,$c(13,10),i)))
+        }
+        Do routine.WriteLine(" Set sc = query.Prepare(.sql,,""DISPLAY"")")
+    }
+    else {
+        Do routine.WriteLine(" New query,sc,col,cols,data")
+        Do routine.WriteLine(" Set query = ##class(%ResultSet).%New()")
+        Do routine.WriteLine(" Set sc = query.Prepare(" _ $ZU(144,1,code) _ ",,""DISPLAY"")")
+    }
+    Do routine.WriteLine(" If (+sc = 0) {")
+    Do routine.WriteLine("  Do $system.OBJ.DisplayError(sc)")
+    Do routine.WriteLine("  QUIT")
+    Do routine.WriteLine(" }")
+    Do routine.WriteLine(" Set sc = query.Execute()")
+    Do routine.WriteLine(" If (+sc = 0) {")
+    Do routine.WriteLine("  Do $system.OBJ.DisplayError(sc)")
+    Do routine.WriteLine("  QUIT")
+    Do routine.WriteLine(" }")
+    // use border=1 for netscape
+    Do routine.WriteLine(" New b Set b=$S(%request.UserAgent[""MSIE"":0,1:1)")
+    Do routine.WriteLine(" Write ""<TABLE BORDER="",b,"" BGCOLOR=""""white"""" CELLPADDING=1 CELLSPACING=0 CLASS=""""SQL""""><TR>""")
+    Do routine.WriteLine(" Set cols = query.GetColumnCount()")
+    Do routine.WriteLine(" For col = 1:1:cols {")
+    Do routine.WriteLine("  Write ""<TH>"",query.GetColumnHeader(col),""</TH>"",!")
+    Do routine.WriteLine(" }")
+    Do routine.WriteLine(" Write ""</TR>""")
+    Do routine.WriteLine(" While (query.Next()) {")
+    Do routine.WriteLine(" Write ""<TR>"",!")
+    Do routine.WriteLine("  For col = 1:1:cols {")
+    Do routine.WriteLine("   Set data = query.GetData(col)")
+    Do routine.WriteLine("   Write ""<TD>"",$S(data="""":""<I>&lt;null&gt;</I>"",1:$ZCVT(data,""O"",""HTML"")),""</TD>"",!")
+    Do routine.WriteLine("  }")
+    Do routine.WriteLine(" Write ""</TR>"",!")
+    Do routine.WriteLine(" }")
+    Do routine.WriteLine(" Write ""</TABLE>""")
+    Do routine.WriteLine(" Do query.Close()")
+    Do routine.WriteLine(" QUIT")
+    // save the routine
+    Do routine.Save()
+    // compile the routine
+    Set sc = routine.Compile("-d")
+    If ($$$ISERR(sc)) {
+        Do $system.OBJ.DisplayError(sc)
+    }
+    Else {
+        // execute the new routine
+        Do ^DocBook.EXECTemp1COS
+    }
+    // restore old namespace
+    Set x = $zu(5,zn)
+    Quit $$$OK
+]]></Implementation>
+</Method>
+
+<Method name="ExecuteCSP">
+<Description>
+Execute a CSP example: note that CSP tags are not supported</Description>
+<Internal>1</Internal>
+<ClassMethod>1</ClassMethod>
+<FormalSpec>code:%String</FormalSpec>
+<ReturnType>%Status</ReturnType>
+<Implementation><![CDATA[
+    // execute in SAMPLES namespace
+    Set zn = $zu(5)
+    Set x = $zu(5,"SAMPLES")
+    Set routine = ##class(%Routine).%New("DocBook.EXECTemp1COS.MAC")
+    // Write lines of code to the routine
+    Do routine.WriteLine("EXECTemp1COS ;"_$ZDT($H,3))
+    // UNIX nonsense!
+    Set code = $TR(code,$C(13),"")
+    // get rid of HTML escapes
+    Set code = $ZCVT(code,"I","HTML")
+    Do routine.WriteLine(" &html<")
+    For ln = 1:1:$L(code,$C(10)) {
+        Do routine.WriteLine($P(code,$C(10),ln))
+    }
+    Do routine.WriteLine(">")
+    Do routine.WriteLine(" QUIT")
+    // save the routine
+    Do routine.Save()
+    // compile the routine
+    Set sc = routine.Compile("-d")
+    If ($$$ISERR(sc)) {
+        Do $system.OBJ.DisplayError(sc)
+    }
+    Else {
+    // execute the new routine
+        Do ^DocBook.EXECTemp1COS
+    }
+    // restore old namespace
+    Set x = $zu(5,zn)
+    Quit $$$OK
+]]></Implementation>
+</Method>
+
+<Method name="GetBuildInfo">
+<Description><![CDATA[
+Generates the version info string for the DocBook database.<BR>
+This is invoked when the database is built.]]></Description>
+<Internal>1</Internal>
+<ClassMethod>1</ClassMethod>
+<FormalSpec>entity:%Boolean=1</FormalSpec>
+<ReturnType>%String</ReturnType>
+<Implementation><![CDATA[
+    quit ("Cach"
+          _ $SELECT(entity:"&eacute;", 1:"e")
+          _ " v"
+          _ $system.Version.GetNumber()
+          _ " ("
+          _ $system.Version.GetCompBuild()
+          _ ")")
+]]></Implementation>
+</Method>
+
+<Method name="SetBuildInfo">
+<Description><![CDATA[
+Set the version info for the DocBook database.<BR>
+This is invoked when the database is built.]]></Description>
+<Internal>1</Internal>
+<ClassMethod>1</ClassMethod>
+<Implementation><![CDATA[    Set ^DocBook.BuildInfo = ..GetBuildInfo()
+]]></Implementation>
+</Method>
+
+<Method name="StartsWith">
+<Description>
+Returns true if string starts with the given fragment.</Description>
+<ClassMethod>1</ClassMethod>
+<FormalSpec>string:%String,fragment:%String,caseSensitive:%Boolean=0</FormalSpec>
+<ReturnType>%Boolean</ReturnType>
+<Implementation><![CDATA[
+    //AAH819 -- added this method
+    set fraglen=$LENGTH(fragment)
+    set extract=$EXTRACT(string,1,fraglen)
+    if caseSensitive {
+        set return=(extract=fragment)
+    } else {
+        set return=($$$UPPER(extract)=$$$UPPER(fragment))
+    }
+    quit return
+]]></Implementation>
+</Method>
+
+<Method name="ProcessArchAttribute">
+<Description><![CDATA[
+Iterates through all rows in the DocBook.book and DocBook.article tables.
+For each book or article, this method finds the arch attribute for the given book or article
+and then uses that to set the Product field for each row in DocBook.block 
+that belong to the given book or article.
+<p><var>item</var> is optional. If specified, it must be the blockid of a book or article;
+if you specify this, we process just that book or article.]]></Description>
+<ClassMethod>1</ClassMethod>
+<FormalSpec>verbose:%Boolean=0,item:%String=""</FormalSpec>
+<ReturnType>%Status</ReturnType>
+<Implementation><![CDATA[
+   //AAH898 -- added this method
+    try {
+        if verbose {
+	        write !, "Starting ProcessArchAttribute()... "
+        }  
+   	    set sql1="SELECT id,blockid,tagattrs FROM DocBook.article WHERE tagattrs IS NOT NULL"
+   	    set sql2="SELECT id,blockid,tagattrs FROM DocBook.book WHERE tagattrs IS NOT NULL"
+        if (item'="") {
+	        set sql1=sql1_" AND topid='"_item_"'"
+	        set sql2=sql2_" AND topid='"_item_"'"
+        } 
+        set sql=sql1_" UNION "_sql2   
+               
+        set stmt = ##class(%SQL.Statement).%New()
+        set status = stmt.%Prepare(sql)
+        if $$$ISERR(status) { 
+			if verbose {
+				do $system.OBJ.DisplayError()
+			}
+            return status
+        }
+        //if we are processing all items, clear this table so we can refresh its contents
+        if (item=""){
+	        do ##class(DocBook.product).%DeleteExtent() 
+    	}
+        set result = stmt.%Execute() 
+        while (result.%Next()) {
+	        set blockid=result.%Get("blockid")
+            set tagattrs=result.%Get("tagattrs")
+            if ('##class(DocBook.block).HasAttr("arch",tagattrs) && verbose) {
+	            write !, ">>>For blockid "_blockid_", arch is not specified!"
+            } else {
+	            set archvalue=##class(DocBook.block).GetAttrValue("arch",tagattrs)
+				if ($$$LOWER(archvalue)="hsfoundation") {
+					set product="HealthShare" 
+				} elseif ($$$LOWER(archvalue)="healthshare") {
+					set product="HealthShare"
+				} elseif ($$$LOWER(archvalue)="trakcare") {
+					set product="TrakCare"
+				} elseif ($$$LOWER(archvalue)="cache") {
+					set product="Cache"
+				} elseif ($$$LOWER(archvalue)="ensemble") {
+					set product="Ensemble"
+				} elseif ($$$LOWER(archvalue)="iris") {
+					set product="IRIS"
+				} elseif ($$$LOWER(archvalue)="intersystems") {
+					set product="all"
+				} else {
+					set product=archvalue
+				}
+	            set conformancevalue=##class(DocBook.block).GetAttrValue("conformance",tagattrs)
+	            if (conformancevalue="") {
+					if verbose {
+						write !, "For blockid "_blockid_", arch="_archvalue_" so product is "_product
+					}
+	            } else {
+		            set product=conformancevalue
+					if verbose {
+						write !, "For blockid "_blockid_", conformance="_conformancevalue_" so product is "_product
+					}
+	            }
+				set status=$$$OK
+				do ..ProcessProductForItem(blockid,product)
+	            //here is where we populate the DocBook.product table
+				if ((product'="all") && '##class(DocBook.product).%ExistsId(product)) {
+					set newproduct=##class(DocBook.product).%New()
+					set newproduct.Name=product
+					set status=newproduct.%Save()
+					if ($$$ISERR(status)&& verbose) {
+						do $system.OBJ.DisplayError()
+					}
+				}
+            }
+           
+        }
+        if verbose {
+	        write !, "Done with ProcessArchAttribute() ",!
+        }  
+    	return status
+    } catch(ex) {
+        return $$$ERROR($$$GeneralError,ex)
+    }
+]]></Implementation>
+</Method>
+
+<Method name="ProcessProductForItem">
+<Description>
+Called by ProcessArchAttribute.
+This processing updates all rows in DocBook.block that belong to the given book or article,
+and sets the Product field for each row, based on the value of arch.
+The item argument is the blockid of the book or article. </Description>
+<Internal>1</Internal>
+<ClassMethod>1</ClassMethod>
+<FormalSpec>item:%String="",product:%String=""</FormalSpec>
+<Private>1</Private>
+<Implementation><![CDATA[
+   //AAH898 -- added this method
+	if (item="") quit $$$ERROR($$$GeneralError,"No item specified")
+	if (product="") quit $$$ERROR($$$GeneralError,"No product specified")
+	&sql(UPDATE DocBook.block SET product=:product WHERE TopId=:item)
+]]></Implementation>
+</Method>
+
+<Method name="ProcessConditionAttribute">
+<Description><![CDATA[
+Iterates through all rows in the DocBook.book and DocBook.article tables.
+For each book or article, this method finds the condition attribute for the given book or article
+and then uses that to set the ExtraTags field for each row in DocBook.block 
+that belong to the given book or article. Also recurses through these lower-level
+rows to find any additional condition attributes and add tags from them as well.
+<p><var>item</var> is optional. If specified, it must be the blockid of a book or article;
+if you specify this, we process just that book or article.]]></Description>
+<ClassMethod>1</ClassMethod>
+<FormalSpec>verbose:%Boolean=0,item:%String=""</FormalSpec>
+<ReturnType>%Status</ReturnType>
+<Implementation><![CDATA[
+   //AAH898 -- added this method
+    try {
+        if verbose {
+	        write !, "Starting ProcessConditionAttribute()... "
+        }  
+   	    set sql1="SELECT id,blockid,tagattrs FROM DocBook.article WHERE tagattrs IS NOT NULL"
+   	    set sql2="SELECT id,blockid,tagattrs FROM DocBook.book WHERE tagattrs IS NOT NULL"
+        if (item'="") {
+	        set sql1=sql1_" AND topid='"_item_"'"
+	        set sql2=sql2_" AND topid='"_item_"'"
+        } else {
+	        //if we are processing all items, clear this table so we can refresh its contents
+	        do ##class(DocBook.searchTag).%DeleteExtent() 
+        }
+        set sql=sql1_" UNION "_sql2      
+        set stmt = ##class(%SQL.Statement).%New()
+        set status = stmt.%Prepare(sql)
+		if $$$ISERR(status) {
+			if verbose {
+				do $system.OBJ.DisplayError()
+			}
+			return status
+		}
+        
+        set result = stmt.%Execute() 
+        while (result.%Next()) {
+            set id=result.%Get("id")
+			set status= ..ProcessTopid(id,verbose)
+			if ($$$ISERR(status) && verbose) {
+				do $system.OBJ.DisplayError()
+			}
+		}
+        if verbose {
+	        write !, "Done with ProcessConditionAttribute() ",!
+        }  
+    	return status
+    } catch(ex) {
+        return $$$ERROR($$$GeneralError,ex)
+    }
+]]></Implementation>
+</Method>
+
+<Method name="ProcessTopid">
+<Description>
+Called by ProcessConditionAttribute.
+Given the id (not blockid) of a book or article, see if this record has a value for the condition
+attribute, and if so, extract that value and update the ExtraTags field for this record and all
+child records. Process child records in the same way.</Description>
+<ClassMethod>1</ClassMethod>
+<FormalSpec>id:%Numeric,verbose:%Boolean=0</FormalSpec>
+<ReturnType>%Status</ReturnType>
+<Implementation><![CDATA[
+   //AAH898 -- added this method
+	set status=$$$OK
+    &sql(SELECT tagattrs, blockid INTO :parentTagAttrs,:blockid FROM DocBook.block where id=:id)
+    //if (SQLCODE'=0) { $$$ERROR($$$GeneralError,"SQLCODE not zero") }
+    if ##class(DocBook.block).HasAttr("condition",parentTagAttrs) {
+		set originaltoplevetags=##class(DocBook.block).GetAttrValue("condition",parentTagAttrs)
+		set topleveltags=..GetCleanedUpTagList(originaltoplevetags,verbose)
+		if (topleveltags'="") {
+			if verbose {
+				write !, "FOUND top-level tags in blockid "_blockid_": " _topleveltags
+			}
+			// AAH915 pass topleveltags by reference so that we can get a case-adjusted list
+			// (we do this to avoid a proliferation of tags that differ only by case)
+			do ..UpdateTagsTable(.topleveltags,verbose)
+			// AAH915 also fix bug on next line!
+			&sql(UPDATE DocBook.block SET extraTags=:topleveltags WHERE blockid=:blockid)
+		}
+		
+    } else {
+		//no need to update DocBook.searchTag table
+	    set topleveltags=""
+    }
+    
+	do ..IterateThroughTopid(id,topleveltags,verbose,.status)
+	quit status
+]]></Implementation>
+</Method>
+
+<Method name="IterateThroughTopid">
+<Description>
+Internal. For use by ProcessTopid(); not to be called standalone.</Description>
+<Internal>1</Internal>
+<ClassMethod>1</ClassMethod>
+<FormalSpec><![CDATA[id:%Numeric,parentTags:%String,verbose:%Boolean=1,&status:%Status]]></FormalSpec>
+<Private>1</Private>
+<ReturnType>%String</ReturnType>
+<Implementation><![CDATA[
+   //AAH898 -- added this method
+    set status=$$$OK
+    set sql="SELECT id, blockid, x__classname,tagattrs FROM DocBook.block WHERE container="_id
+	set stmt=##class(%SQL.Statement).%New()
+	set status = stmt.%Prepare(sql)
+    if $$$ISERR(status) { 
+		if verbose {
+			do $system.OBJ.DisplayError()
+		}
+        quit 
+    }
+	set result = stmt.%Execute() 
+	while (result.%Next()) {
+		set childid=result.%Get("id") //numeric id of record
+		set childblockid=result.%Get("blockid") //string of record
+		set tagattrs=result.%Get("tagattrs")
+		if ##class(DocBook.block).HasAttr("condition",tagattrs) {
+			set origaddedTags=##class(DocBook.block).GetAttrValue("condition",tagattrs)
+			set addedTags=..GetCleanedUpTagList(origaddedTags,verbose)
+			if addedTags="" continue
+			if verbose {
+				write !, "FOUND extra tags in blockid "_childblockid_": " _addedTags
+			}
+    		//now update DocBook.searchTag table
+    		do ..UpdateTagsTable(addedTags,verbose)
+			if (parentTags="") {
+				set newTags=addedTags
+			} else {
+				set newTags=parentTags_";"_addedTags
+			}
+			
+		} else {
+    		//no need to update DocBook.searchTag table
+			set newTags=parentTags
+		}
+        &sql(UPDATE DocBook.block SET extraTags=:newTags WHERE id=:childid)
+		do ..IterateThroughTopid(childid,newTags)
+	}
+]]></Implementation>
+</Method>
+
+<Method name="GetCleanedUpTagList">
+<ClassMethod>1</ClassMethod>
+<FormalSpec>tagList:%String,verbose:%Boolean=0</FormalSpec>
+<ReturnType>%String</ReturnType>
+<Implementation><![CDATA[
+	set tagList=$ZSTRIP(tagList,"<>W")
+	set list=$LISTFROMSTRING(tagList,";")
+	set cleanedupstring=""
+	for i=1:1:$LL(list) {
+		set item=($LG(list,i))
+		set item=$ZSTRIP(item,"<>W")
+		if (item="") continue
+		if (item="preserve") continue
+		if (i=1) {
+			set cleanedupstring=item
+		} else {
+			set cleanedupstring=cleanedupstring_";"_item
+		}
+	}
+	quit cleanedupstring
+]]></Implementation>
+</Method>
+
+<Method name="UpdateTagsTable">
+<ClassMethod>1</ClassMethod>
+<FormalSpec><![CDATA[&tagList:%String,verbose:%Boolean]]></FormalSpec>
+<Implementation><![CDATA[
+	set list=$LISTFROMSTRING(tagList,";")
+	set newlist=""
+	for i=1:1:$LL(list) {
+		set item=($LG(list,i))
+		set itemUPPER=$$$UPPER(item)
+		&sql(SELECT Name into :NameActual FROM DocBook.searchTag WHERE UPPERName=:itemUPPER)
+		// AAH915 - rewrote
+		if (SQLCODE=0) {
+			//if we already have this tag (in any case), then grab that and put into the new list)
+			//also in this case we don't create a new record in DocBook.searchTag
+			set itemForList=NameActual
+		} else {
+			//if we don't yet have this tag, use its case as is to update the list and to 
+			//create a new record in DocBook.searchTag
+			set new=##class(DocBook.searchTag).%New()
+			set new.Name=item
+			set new.UPPERName=itemUPPER
+			set itemForList=item
+			set status=new.%Save()
+			if ($$$ISERR(status) && verbose) {
+				do $system.OBJ.DisplayError()
+			}
+		}
+		//update the list we'll be returning
+		if (i=1) {
+			set newlist=itemForList
+		} else {
+			set newlist=newlist_";"_itemForList
+		}
+	}
+	set tagList=newlist
+]]></Implementation>
+</Method>
+
+<Method name="ProcessRankings">
+<ClassMethod>1</ClassMethod>
+<FormalSpec>verbose:%Boolean=0</FormalSpec>
+<Implementation><![CDATA[
+    if verbose {
+	    write !, "Starting ProcessRankings()... "
+    }  
+    kill ^||ProcessedRankings
+    If $D(^DocBook.Config("SOURCE")) {
+        Set n = $O(^DocBook.Config("SOURCE",""))
+        While (n'="") {
+	        set dirname=^DocBook.Config("SOURCE",n)
+	        set lastchar=$E(dirname,$L(dirname))
+	        if ((lastchar'="\") && (lastchar'="/")) {
+		        set dirname=dirname_"\"
+	        }
+        	set filename=dirname_"rankings.txt"
+        	do ..ProcessRankingsFromFile(filename,verbose)
+            Set n = $Order(^DocBook.Config("SOURCE",n))
+        }
+    }
+    if verbose {
+	    write !, "Done with ProcessRankings() ",!
+    }
+]]></Implementation>
+</Method>
+
+<Method name="ProcessRankingsFromFile">
+<Description>
+Given a rankings file, updates the Rank property for all records in DocBook.block</Description>
+<ClassMethod>1</ClassMethod>
+<FormalSpec>filename:%String="c:\0work\cache-rankings.txt",verbose:%Boolean=0</FormalSpec>
+<Implementation><![CDATA[
+	if (filename="") quit
+	set test=##class(%File).Exists(filename)
+	if 'test quit
+	
+	set file=##class(%Stream.FileCharacter).%New()
+	if verbose {
+		write !, "Using rankings file ",filename
+	}
+	set status=file.LinkToFile(filename)
+	if $$$ISERR(status) {
+		do $system.Status.DisplayError(status)
+		quit status
+	}
+	while (file.AtEnd=0) {
+		set line=file.ReadLine(,.status)
+ 		if $$$ISERR(status) { do $system.Status.DisplayError(status) }
+ 		set line=$ZSTRIP(line,"=W") ; if there are multiple whitespace characters, replace 'em each with on
+ 		set line=$TR(line," ",$CHAR(9)) ; replace blank spaces with tabs
+		set data=$LISTFROMSTRING(line,$CHAR(9))	; assumes a tab-separated file
+		set rank	=$LISTGET(data,1)
+		set blockid	=$LISTGET(data,2)
+		if verbose {
+			write !, "For blockid ",blockid," rank is ",rank
+		}
+		//if we are processing a child block, make a note of it!
+		if (blockid [ "_") {
+			set rootblock=$P(blockid,"_",1)
+			set childblockform=rootblock_"_"
+			set ^||ProcessedRankings(childblockform)=""
+		}
+		//if this is a parent blockid, check to see if we already processed a child block
+		if (blockid '[ "_") {
+			set childblockform=blockid_"_"
+			if $D(^||ProcessedRankings(childblockform)) {
+				set toponly=1
+			} else {
+				set toponly=0
+			}
+		}
+		
+		&sql(SELECT id into :ID from DocBook.block where blockid=:blockid)
+		if (SQLCODE=0) {
+			do ..ProcessRankForId(ID,rank,verbose,.status,toponly)
+		}
+	}
+    &sql(UPDATE DocBook.block SET Rank=10000 WHERE container IS NULL)
+]]></Implementation>
+</Method>
+
+<Method name="ProcessRankForId">
+<Description>
+Internal. For use by ProcessRankingsFromFile(); not to be called standalone.</Description>
+<Internal>1</Internal>
+<ClassMethod>1</ClassMethod>
+<FormalSpec><![CDATA[id:%Numeric,rank:%Numeric="",verbose:%Boolean=0,&status:%Status,topOnly:%Boolean=0]]></FormalSpec>
+<Private>1</Private>
+<ReturnType>%String</ReturnType>
+<Implementation><![CDATA[
+   //AAH898 -- added this method
+    set status=$$$OK
+    &sql(UPDATE DocBook.block SET Rank=:rank WHERE id=:id)
+    if topOnly { 
+    	quit
+    }
+    //process child rows
+    set sql="SELECT id, blockid, x__classname,tagattrs FROM DocBook.block WHERE container="_id
+	set stmt=##class(%SQL.Statement).%New()
+	set status = stmt.%Prepare(sql)
+    if $$$ISERR(status) { 
+		if verbose {
+			do $system.OBJ.DisplayError()
+		}
+        quit 
+    }
+	set result = stmt.%Execute() 
+	while (result.%Next()) {
+		set childid=result.%Get("id") //numeric id of record
+		set classname=result.%Get("x__classname") 
+		set test=##class(DocBook.block).%OpenId(childid)
+		set testclassname=test.%ClassName()
+		//if ((classname [ "book") || (classname [ "article") || (classname [ "chapter") || (classname [ "appendix") || (classname [ "glossary") || (classname [ "reference") || (classname [ "refentry") || (classname [ "sect1") || (classname [ "sect2")  || (classname [ "refsect1") || (classname [ "refsect2")) {
+    	    &sql(UPDATE DocBook.block SET Rank=:rank WHERE id=:childid)
+			do ..ProcessRankForId(childid,rank,.status)
+		//}
+	}
+]]></Implementation>
+</Method>
+
+<Method name="ProcessDerivedTags">
+<ClassMethod>1</ClassMethod>
+<FormalSpec>verbose:%Boolean=0</FormalSpec>
+<Implementation><![CDATA[
+    if verbose {
+	    write !, "Starting ProcessDerivedTags()... "
+    }  
+    If $D(^DocBook.Config("SOURCE")) {
+        Set n = $O(^DocBook.Config("SOURCE",""))
+        While (n'="") {
+	        set dirname=^DocBook.Config("SOURCE",n)
+	        set lastchar=$E(dirname,$L(dirname))
+	        if ((lastchar'="\") && (lastchar'="/")) {
+		        set dirname=dirname_"\"
+	        }
+        	set filename=dirname_"derivedtags.txt"
+        	do ..ProcessDerivedTagsFromFile(filename,verbose)
+            Set n = $Order(^DocBook.Config("SOURCE",n))
+        }
+    }
+    if verbose {
+	    write !, "Done with ProcessDerivedTags() ",!
+    }
+]]></Implementation>
+</Method>
+
+<Method name="ProcessDerivedTagsFromFile">
+<Description>
+Given a derivedtags.txt file, updates the extraTags property for any affected block</Description>
+<ClassMethod>1</ClassMethod>
+<FormalSpec>filename:%String="c:\0work\derivedtags.txt",verbose:%Boolean=0</FormalSpec>
+<Implementation><![CDATA[
+	if (filename="") quit
+	set test=##class(%File).Exists(filename)
+	if 'test quit
+	
+	set file=##class(%Stream.FileCharacter).%New()
+	if verbose {
+		write !, "Using derived tags file ",filename
+	}
+	set status=file.LinkToFile(filename)
+	if $$$ISERR(status) {
+		do $system.Status.DisplayError(status)
+		quit status
+	}
+	while (file.AtEnd=0) {
+		set line=file.ReadLine(,.status)
+ 		if $$$ISERR(status) { do $system.Status.DisplayError(status) }
+		set data=$LISTFROMSTRING(line,$CHAR(9))	; assumes a tab-separated file
+		set basetag	=$LISTGET(data,1)
+		set derivedtag	=$LISTGET(data,2)
+		if verbose {
+			write !, "For base tag ",basetag," we will apply the additional derived tag ",derivedtag
+		}
+		set sql="SELECT blockid,ID from DocBook.block WHERE extraTags [ '"_basetag_"'"
+		set stmt=##class(%SQL.Statement).%New()
+		set status=stmt.%Prepare(sql)
+ 		if $$$ISERR(status) { do $system.Status.DisplayError(status) }
+ 		set rset=stmt.%Execute()
+ 		set foundone=0
+ 		set count=0
+ 		while rset.%Next() {
+	 		set count=count+1
+	 		if (count=1) {
+		 		set foundone=1
+			    if (verbose>1) {
+				    write !, "Adding derived tag "_derivedtag_" to "
+			    }
+	 		}
+	 		set ID=rset.%Get("ID")
+	 		set blockid=rset.%Get("blockid")
+	 		if (verbose>1) {
+		 		write blockid, "  "
+	 		}
+	 		//the SQL query just looks to see if extraTags contains a string that looks like the base
+	 		//tag -- here we are making sure it really matches
+		    set tagmatch=##class(DocBook.block).HaveMatchingTag(blockid,basetag)
+		    if tagmatch {
+			    set block=##class(DocBook.block).%OpenId(ID)
+			    set block.extraTags=block.extraTags_";"_derivedtag
+			    set status=block.%Save()
+		 		if $$$ISERR(status) { do $system.Status.DisplayError(status) }
+		    }
+ 		}
+ 		if foundone {
+	   		do ..UpdateTagsTable(derivedtag,verbose)
+ 		}
+		
+	}
+]]></Implementation>
+</Method>
+
+<Method name="ApplyMacros">
+<ClassMethod>1</ClassMethod>
+<FormalSpec>verbose:%Boolean=0</FormalSpec>
+<Implementation><![CDATA[
+    if verbose {
+	    write !, "Starting ApplyMacros()... "
+    }  
+    If $D(^DocBook.Config("SOURCE")) {
+        Set n = $O(^DocBook.Config("SOURCE",""))
+        While (n'="") {
+	        set dirname=^DocBook.Config("SOURCE",n)
+	        set lastchar=$E(dirname,$L(dirname))
+	        if ((lastchar'="\") && (lastchar'="/")) {
+		        set dirname=dirname_"\"
+	        }
+        	set filename=dirname_"macros.txt"
+        	do ..ApplyMacrosFromFile(filename,verbose)
+            Set n = $Order(^DocBook.Config("SOURCE",n))
+        }
+    }
+    if verbose {
+	    write !, "Done with ApplyMacros() ",!
+    }
+]]></Implementation>
+</Method>
+
+<Method name="ApplyMacrosFromFile">
+<Description>
+Given a macros.txt file, make the substitutions described in it</Description>
+<Internal>1</Internal>
+<ClassMethod>1</ClassMethod>
+<FormalSpec>filename:%String="c:\0work\macros.txt",verbose:%Boolean=0</FormalSpec>
+<Implementation><![CDATA[
+	if (filename="") quit
+	set test=##class(%File).Exists(filename)
+	if 'test quit
+	
+	set file=##class(%Stream.FileCharacter).%New()
+	if verbose {
+		write !, "Using macro file ",filename
+	}
+	set status=file.LinkToFile(filename)
+	if $$$ISERR(status) {
+		do $system.Status.DisplayError(status)
+		quit status
+	}
+	while (file.AtEnd=0) {
+		set line=file.ReadLine(,.status)
+ 		if $$$ISERR(status) { do $system.Status.DisplayError(status) }
+		set data=$LISTFROMSTRING(line,$CHAR(9))	; assumes a tab-separated file
+		set macroname	=$LISTGET(data,1)
+		set macrodef	=$LISTGET(data,2)
+		if verbose {
+			write !, "For macro ",macroname," we will substitute ",macrodef
+		}
+		do ..ApplyMacroToField("content",macroname,macrodef,verbose)
+		do ..ApplyMacroToField("title",macroname,macrodef,verbose)
+	}
+]]></Implementation>
+</Method>
+
+<Method name="ApplyMacroToField">
+<Internal>1</Internal>
+<ClassMethod>1</ClassMethod>
+<FormalSpec>fieldname:%String="content",macroname:%String,macrodef:%String,verbose:%Boolean=0</FormalSpec>
+<Implementation><![CDATA[
+    if (macroname="") quit
+    if (macrodef="") quit
+    set old="DOCBOOKMACRO("_macroname_")"
+    set sql="SELECT id,blockid,content from DocBook.block where %SQLUPPER("_fieldname_") [ 'DOCBOOKMACRO'"
+	set stmt=##class(%SQL.Statement).%New()
+	set status=stmt.%Prepare(sql)
+	if $$$ISERR(status) { do $system.Status.DisplayError(status) }
+	set rset=stmt.%Execute()
+	while rset.%Next() {
+		set ID=rset.%Get("ID")
+		set blockid=rset.%Get("blockid")
+		if (verbose>1) {
+			write !, "Processing macro for blockid "_blockid
+		}
+		set block=##class(DocBook.block).%OpenId(ID)
+		if (fieldname="content") {
+			set texttoupdate=block.content
+			set block.content=$REPLACE(texttoupdate,old,macrodef)
+		} else {
+			set texttoupdate=block.title
+			set block.title=$REPLACE(texttoupdate,old,macrodef)
+		}
+		set status=block.%Save()
+	if $$$ISERR(status) { do $system.Status.DisplayError(status) }
+	}
+]]></Implementation>
+</Method>
+
+<Method name="AfterLoadSets">
+<Description>
+Search will not work until you run this method.</Description>
+<ClassMethod>1</ClassMethod>
+<FormalSpec>verbose:%Boolean=0</FormalSpec>
+<Implementation><![CDATA[
+    Do ##class(DocBook.Utils).CalculatedAddlProps(verbose) //must do this early so we have topid in place for later use
+    Do ##class(DocBook.Utils).ApplyMacros(verbose)
+    Do ##class(DocBook.Utils).CalculatedAddlProps(verbose) 
+    Do ##class(DocBook.Utils).ProcessRankings(verbose)
+    Do ##class(DocBook.Utils).ProcessArchAttribute(verbose) //must do *after* CalculatedAddlProps()
+    Do ##class(DocBook.Utils).ProcessConditionAttribute(verbose)
+    Do ##class(DocBook.Utils).ProcessDerivedTags(verbose)
+]]></Implementation>
+</Method>
+
+<Method name="CalculatedAddlProps">
+<ClassMethod>1</ClassMethod>
+<FormalSpec>verbose:%Boolean</FormalSpec>
+<ReturnType>%Status</ReturnType>
+<Implementation><![CDATA[
+    try {
+        if verbose {
+	        write !, "Starting CalculatedAddlProps()... "
+        }  
+    &sql(DECLARE ADDEDPROPS CURSOR FOR
+         SELECT id,sourcefile INTO :ID,sourcefile FROM DocBook.block)
+    &sql(OPEN ADDEDPROPS)
+    &sql(FETCH ADDEDPROPS)
+    While (SQLCODE = 0) {
+		set NearestLevel1=##class(DocBook.block).GetIdAtLevel(ID,1)
+		set Topid=$PIECE($PIECE(sourcefile,".xml",1),"_",1)
+		set record=##class(DocBook.block).%OpenId(ID)
+		set searchable=##class(DocBook.block).GetIsSearchable(record)
+	
+		&SQL(UPDATE DocBook.block 
+			SET NearestLevel1=:NearestLevel1, 
+			    Topid=:Topid,
+		    	Searchable=:searchable
+				WHERE id=:ID)
+    	&sql(FETCH ADDEDPROPS)
+    }
+    &sql(CLOSE ADDEDPROPS)
+    /*
+   	    set sql="SELECT id FROM DocBook.block"
+        set stmt = ##class(%SQL.Statement).%New()
+        set status = stmt.%Prepare(sql)
+		if $$$ISERR(status) {
+			if verbose {
+				do $system.OBJ.DisplayError()
+			}
+			return status
+		}
+        
+        set result = stmt.%Execute() 
+        while (result.%Next()) {
+            set id=result.%Get("id")
+		}
+        if verbose {
+	        write !, "Done with CalculatedAddlProps() ",!
+        }  
+    	return status
+    	*/
+    } catch(ex) {
+        return $$$ERROR($$$GeneralError,ex)
+    }
+]]></Implementation>
+</Method>
+
+<Method name="GetProdVersionInfo">
+<Internal>1</Internal>
+<ClassMethod>1</ClassMethod>
+<ReturnType>%String</ReturnType>
+<Implementation><![CDATA[
+	if $D($$$OVERRIDEPRODVERSIONINFO) {
+		quit $$$OVERRIDEPRODVERSIONINFO
+	}
+	set prodnames=..GetProdNames()
+    if $D($$$OVERRIDEDOCVERSION) {
+	    quit prodnames_" "_$$$OVERRIDEDOCVERSION
+    } elseif (##class(DocBook.Utils).ProductDocLoaded("TrakCare")=1) {
+	    quit prodnames
+    } elseif (##class(%Library.EnsembleMgr).IsHealthShareInstalled()=1) {
+	    quit prodnames
+	} else {
+	    quit prodnames_" "_$system.Version.GetNumber()
+	}
+]]></Implementation>
+</Method>
+
+<Method name="GetProdNames">
+<Internal>1</Internal>
+<ClassMethod>1</ClassMethod>
+<ReturnType>%String</ReturnType>
+<Implementation><![CDATA[
+	if $D($$$OVERRIDEPRODNAMES) {
+		set prodnames=$$$OVERRIDEPRODNAMES
+	} elseif (##class(DocBook.Utils).ProductDocLoaded("TrakCare")=1) {
+		set prodnames="TrakCare"
+	} elseif (##class(DocBook.Utils).ProductDocLoaded("HealthShare")=1) {
+		set prodnames="HealthShare"
+	} elseif (##class(DocBook.Utils).ProductDocLoaded("IRIS")=1) {
+		set prodnames="InterSystems IRIS"
+	} elseif (##class(DocBook.Utils).ProductDocLoaded("Ensemble")=1) {
+		set prodnames="Ensemble and Cach&eacute;"
+	} elseif (##class(DocBook.Utils).ProductDocLoaded("Cache")=1) {
+		set prodnames="Cach&eacute;"
+	} else {
+		set prodnames=""
+	}
+    quit prodnames
+]]></Implementation>
+</Method>
+</Class>
+
+
+<Class name="DocBook.book">
+<Description>
+This class represents a book.</Description>
+<ClassType>persistent</ClassType>
+<IncludeCode>DocBookMac</IncludeCode>
+<ProcedureBlock>1</ProcedureBlock>
+<Super>DocBook.container</Super>
+<TimeChanged>65254,49905.465563</TimeChanged>
+<TimeCreated>59241,40475</TimeCreated>
+
+<Property name="set">
+<Type>set</Type>
+<Cardinality>one</Cardinality>
+<Inverse>books</Inverse>
+<Relationship>1</Relationship>
+<SqlFieldName>dbset</SqlFieldName>
+</Property>
+
+<Index name="setIdx">
+<Type>bitmap</Type>
+<Properties>set</Properties>
+</Index>
+
+<Method name="GetBannerInfo">
+<Internal>1</Internal>
+<FormalSpec>info:DocBook.UI.BannerInfo</FormalSpec>
+<Implementation><![CDATA[
+	Set info.title = $$$T("Contents")
+	Set info.booktitle = ..title
+	Set info.chap = ""
+	Set info.prev = ""
+    Set key = $G(%request.Data("KEY",1))
+	&sql(SELECT id into :BOOK FROM DocBook.Container WHERE blockid=:key)
+	if (SQLCODE'=0) {
+	Set info.next = ""
+		quit
+	}
+	&sql(SELECT MIN(blockpos) INTO :BLOCKPOS FROM DocBook.container WHERE (container=:BOOK AND title IS NOT NULL))
+	if (SQLCODE'=0) {
+		Set info.next = ""
+		quit
+	}
+	&sql(SELECT blockid into :BLOCKID FROM DocBook.Container WHERE book=:BOOK AND blockpos=:BLOCKPOS)
+	if (SQLCODE'=0) {
+		Set info.next = ""
+		quit
+	}
+	Set info.next = BLOCKID
+]]></Implementation>
+</Method>
+
+<Method name="HTMLRender">
+<Internal>1</Internal>
+<Implementation><![CDATA[
+	Set chapno = 1
+	Set id = ..%Id()
+	&html<<TABLE WIDTH="100%" style="border-spacing:0px; padding:0px;">>
+	//&html<<TR>>
+	//&html<<TD style="text-align:right;" WIDTH="20%">&nbsp;</TD>>
+	//&html<<TD><DIV CLASS="TOC" style="font-weight: bold;">>
+	//Write $$$T("Contents")
+	//&html<</DIV><HR></TD>>
+	//&html<</TR>>
+	Do ..ShowComponents(id)
+	&html<</TABLE>>
+]]></Implementation>
+</Method>
+
+<Method name="GetGotoList">
+<Description>
+ Provide info for the goto list </Description>
+<Internal>1</Internal>
+<FormalSpec><![CDATA[&gtl:cdata]]></FormalSpec>
+<Implementation><![CDATA[
+	Set id = ..%Id()
+	// list all of the components
+	&sql(DECLARE G1Cursor CURSOR FOR
+		SELECT ID,blockid, title
+		INTO :cid, :key, :title
+		FROM component
+		WHERE book = :id
+		ORDER BY container, blockpos
+	)
+	&sql(OPEN G1Cursor)
+	&sql(FETCH G1Cursor)
+	Set num = 1
+	While (SQLCODE = 0) {
+		Set gtl(num) = $LB(key,title)
+		&sql(FETCH G1Cursor)
+		Set num = num + 1
+	}
+	&sql(CLOSE G1Cursor)
+	
+	Quit
+]]></Implementation>
+</Method>
+
+<Method name="ShowComponents">
+<Description>
+Show the list of components for this book</Description>
+<Internal>1</Internal>
+<FormalSpec>ctrid:id</FormalSpec>
+<Private>1</Private>
+<Implementation><![CDATA[
+	New %ISCDBCounter
+	Set %ISCDBCounter = $INCREMENT(^||DocBook.CursorCount)
+	Kill %DocBookCursor(%ISCDBCounter)
+#EXECUTE Set %msqlvar = "%DocBookCursor(%ISCDBCounter"
+	Set lastcls = ""
+	// loop over components
+	&sql(DECLARE CompCursor CURSOR FOR
+		SELECT ID,blockid, title, subtitle, x__classname
+		INTO :compid,:key, :title, :desc, :cls
+		FROM component
+		WHERE container = :ctrid
+		ORDER BY blockpos
+	)
+	&sql(OPEN CompCursor)
+	&sql(FETCH CompCursor)
+	While (SQLCODE = 0) {
+		// figure out what kind of component this is
+		If (cls [ "chapter") {
+			Set no(cls) = $G(no(cls),0) + 1
+			Set no = no(cls)
+			Set label = $$$T("Chapter ") _ no
+		}
+		ElseIf (cls [ "part") {
+			Set no(cls) = $G(no(cls),0) + 1
+			Set no = no(cls)
+			Set label = $$$T("Part ") _ ..Roman(no)
+		}
+		ElseIf (cls [ "appendix") {
+			Set no(cls) = $G(no(cls),0) + 1
+			Set no = ..Letter(no(cls))
+			Set label = $$$T("Appendix ") _ no
+		}
+		ElseIf (cls [ "glossary") {
+			Set no(cls) = $G(no(cls),0) + 1
+			Set no = ..Letter(no(cls))
+			Set label = $$$T("Glossary ") _ no
+		}
+		ElseIf (cls [ "preface") {
+			Set no(cls) = $G(no(cls),0) + 1
+			Set no = ..Letter(no(cls))
+			Set label = $$$T("Preface ") // !!!
+		}
+		ElseIf (cls [ "reference") {
+			Set no(cls) = $G(no(cls),0) + 1
+			Set no = ..Letter(no(cls))
+			Set label = $$$T("Reference ") _ no
+		}
+		Else {
+			Set no = ""
+			Set label = ""
+		}
+		If ((lastcls '= "") && (lastcls '= cls)) {
+			// draw a ruler between different types of components
+			&html<<TR><TD style="text-align:right;" WIDTH="20%">&nbsp;</TD><TD><HR></TD></TR>>
+		}
+		Set lastcls = cls
+		
+		&html<<TR><TD style="text-align:right;" WIDTH="20%"><FONT SIZE="-1">>
+		&html<#(label)#:&nbsp;</FONT></TD><TD><DIV CLASS="TOC">>
+		
+		If (cls [ "part") {
+			&html<<DIV CLASS="Set">#(title)#</DIV>>
+		}
+		Else {
+			&html<<A CLASS="TOCChapter" TITLE='#(desc)#' HREF='DocBook.UI.Page.cls?KEY=#($ZCVT(key,"O","URL"))#'>#(title)#</A>>
+		}
+		&html<</DIV>
+			</TD></TR>
+		>
+		&html<<TR><TD>&nbsp;</TD><TD>>
+		If (cls [ "reference") {
+			Do ..ShowRefEntries(compid)
+		}
+		ElseIf (cls [ "part") {
+			Do ..ShowComponents(compid)
+		}
+		Else {
+			Do ..ShowSect1(compid,no)
+		}
+	
+		&html<</TD></TR>>
+		&sql(FETCH CompCursor)
+	}
+	&sql(CLOSE CompCursor)
+#EXECUTE Kill %msqlvar
+	Quit
+]]></Implementation>
+</Method>
+
+<Method name="Letter">
+<Description>
+Convert number to letter label</Description>
+<Internal>1</Internal>
+<ClassMethod>1</ClassMethod>
+<FormalSpec>val:%Integer</FormalSpec>
+<ReturnType>%String</ReturnType>
+<Implementation><![CDATA[
+	// this handles up to 26 * 26 items
+	Set lo = val - 1
+	Set hi = lo \ 26
+	Set lo = (lo # 26) + 1
+	Quit:(hi = 0) $C(64 + lo)
+	Quit ($C(64 + hi) _ $C(64 + lo))
+]]></Implementation>
+</Method>
+
+<Method name="Roman">
+<Description>
+Convert number to Roman numeral (incomplete)</Description>
+<Internal>1</Internal>
+<ClassMethod>1</ClassMethod>
+<FormalSpec>val:%Integer</FormalSpec>
+<ReturnType>%String</ReturnType>
+<Implementation><![CDATA[
+	// this is only used for Part #s, so an incomplete
+	// implementation is sufficient.
+	If (val = 1) {
+		Quit "I"
+	}
+	ElseIf (val = 2) {
+		Quit "II"
+	}
+	ElseIf (val = 3) {
+		Quit "III"
+	}
+	ElseIf (val = 4) {
+		Quit "IV"
+	}
+	ElseIf (val = 5) {
+		Quit "V"
+	}
+	ElseIf (val = 6) {
+		Quit "VI"
+	}
+	ElseIf (val = 7) {
+		Quit "VII"
+	}
+	ElseIf (val = 8) {
+		Quit "VIII"
+	}
+	ElseIf (val = 9) {
+		Quit "IX"
+	}
+	ElseIf (val = 10) {
+		Quit "X"
+	}
+	ElseIf (val = 11) {
+		Quit "XI"
+	}
+	ElseIf (val = 12) {
+		Quit "XII"
+	}
+	Quit ""
+]]></Implementation>
+</Method>
+
+<Method name="ShowChapters">
+<Description>
+Show the list of chapters for this container</Description>
+<Internal>1</Internal>
+<FormalSpec>ctrid:id</FormalSpec>
+<Private>1</Private>
+<Implementation><![CDATA[
+	Set chapno = 1
+	// loop over chapters	
+	&sql(DECLARE ChapCursor CURSOR FOR
+		SELECT ID,blockid, title, subtitle
+		INTO :chapid,:key, :title, :desc
+		FROM chapter
+		WHERE container = :ctrid
+		ORDER BY blockpos
+	)
+	&sql(OPEN ChapCursor)
+	&sql(FETCH ChapCursor)
+	While (SQLCODE = 0) {
+		&html<<TR><TD style="text-align:right;" WIDTH="20%"><FONT SIZE="-1">>
+		&html<Chapter #(chapno)#:&nbsp;</FONT></TD><TD><DIV CLASS="TOC">>
+		
+		&html<<A CLASS="TOCChapter" TITLE='#(desc)#' HREF='DocBook.UI.Page.cls?KEY=#($ZCVT(key,"O","URL"))#'>#(title)#</A>>
+		&html<</DIV>
+			</TD></TR>
+		>
+		&html<<TR><TD>&nbsp;</TD><TD>>
+		Do ..ShowSect1(chapid,chapno)
+	
+		&html<</TD></TR>>
+		Set chapno = chapno + 1
+		&sql(FETCH ChapCursor)
+	}
+	&sql(CLOSE ChapCursor)
+]]></Implementation>
+</Method>
+
+<Method name="ShowReferences">
+<Description>
+Show the list of references for this container</Description>
+<Internal>1</Internal>
+<FormalSpec>ctrid:id</FormalSpec>
+<Private>1</Private>
+<Implementation><![CDATA[
+	Set chapno = 1
+	Set ruler = 1 // !!!
+	// loop over references
+	&sql(DECLARE RefCursor CURSOR FOR
+		SELECT ID, blockid, title, subtitle
+		INTO :refid, :key, :title, :desc
+		FROM reference
+		WHERE container = :ctrid
+		ORDER BY blockpos
+	)
+	&sql(OPEN RefCursor)
+	&sql(FETCH RefCursor)
+	While (SQLCODE = 0) {
+		If (ruler = 0) {
+			// draw ruler before references
+			&html<<TR><TD style="text-align:right;" WIDTH="20%">&nbsp;</TD><TD><HR></TD></TR>>
+			Set ruler = 1
+		}
+		&html<<TR><TD style="text-align:right;" WIDTH="20%"><FONT SIZE="-1">>
+		&html<Reference:</FONT></TD><TD><DIV CLASS="TOC">>
+		&html<<A CLASS="TOCChapter" TITLE='#(desc)#'>#(title)#</A>>
+		
+		&html<</DIV>
+			</TD></TR>
+		>
+		&html<<TR><TD>&nbsp;</TD><TD>>
+		// have the reference display its entries
+		Do ..ShowRefEntries(refid)	
+		&html<</TD></TR>>
+		Set chapno = chapno + 1
+		&sql(FETCH RefCursor)
+	}
+	&sql(CLOSE RefCursor)
+]]></Implementation>
+</Method>
+
+<Method name="ShowAppendices">
+<Description>
+Show the list of appendices for this container</Description>
+<Internal>1</Internal>
+<FormalSpec>ctrid:id</FormalSpec>
+<Private>1</Private>
+<Implementation><![CDATA[
+	Set chapno = 1
+	Set ruler = 0
+	// loop over appendices
+	&sql(DECLARE AppCursor CURSOR FOR
+		SELECT ID,blockid, title, subtitle
+		INTO :chapid,:key, :title, :desc
+		FROM appendix
+		WHERE container = :ctrid
+		ORDER BY blockpos
+	)
+	&sql(OPEN AppCursor)
+	&sql(FETCH AppCursor)
+	While (SQLCODE = 0) {
+		Set desc = ##class(DocBook.Renderer).FilterText(desc)
+		If (ruler = 0) {
+			// draw ruler before appendices
+			&html<<TR><TD style="text-align:right;" WIDTH="20%">&nbsp;</TD><TD><HR></TD></TR>>
+			Set ruler = 1
+		}
+		&html<<TR><TD style="text-align:right;" WIDTH="20%"><FONT SIZE="-1">>
+		&html<Appendix #($C(64+chapno))#:&nbsp;</FONT></TD><TD><DIV CLASS="TOC">>
+		
+		&html<<A CLASS="TOCChapter" TITLE='#(desc)#' HREF='DocBook.UI.Page.cls?KEY=#($ZCVT(key,"O","URL"))#'>#(title)#</A>>
+		&html<</DIV>
+			</TD></TR>
+		>
+		&html<<TR><TD>&nbsp;</TD><TD>>
+		Do ..ShowSect1(chapid,chapno)
+	
+		&html<</TD></TR>>
+		Set chapno = chapno + 1
+		&sql(FETCH AppCursor)
+	}
+	&sql(CLOSE AppCursor)
+]]></Implementation>
+</Method>
+
+<Method name="ShowSect1">
+<Description>
+display the level 1 sections for the given chapter</Description>
+<Internal>1</Internal>
+<FormalSpec>id:id,label:dbint</FormalSpec>
+<Private>1</Private>
+<Implementation><![CDATA[
+	Set num = 1
+	// list all of the sect1 blocks
+	&sql(DECLARE S1Cursor CURSOR FOR
+		SELECT ID,blockid, title, component->blockid
+		INTO :sid,:key, :title, :chap
+		FROM sect1
+		WHERE container = :id
+	)
+	&sql(OPEN S1Cursor)
+	&sql(FETCH S1Cursor)
+	Write "<div>",!
+	While (SQLCODE = 0) {
+		&html<<A CLASS="TOCSect1" HREF='DocBook.UI.Page.cls?KEY=#($ZCVT(chap,"O","URL"))##("#"_key)#'>#(label _ "." _ num)# #(title)#</A></br>>
+		Do ..ShowSect2(sid,label _ "." _ num)
+		&sql(FETCH S1Cursor)
+		Set num = num + 1
+	}
+	Write "</div>",!
+	&sql(CLOSE S1Cursor)
+]]></Implementation>
+</Method>
+
+<Method name="ShowSect2">
+<Description>
+display the level 2 sections for the given chapter</Description>
+<Internal>1</Internal>
+<FormalSpec>id:id,label:cdata</FormalSpec>
+<Private>1</Private>
+<Implementation><![CDATA[
+	Set num = 1
+	// list all of the sect2 blocks
+	&sql(DECLARE S2Cursor CURSOR FOR
+		SELECT ID,blockid, title, component->blockid
+		INTO :sid,:key, :title, :chap
+		FROM sect2
+		WHERE container = :id
+	)
+	&sql(OPEN S2Cursor)
+	&sql(FETCH S2Cursor)
+	Write "<div>",!
+	While (SQLCODE = 0) {
+		&html<&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<A CLASS="TOCSect2" HREF='DocBook.UI.Page.cls?KEY=#($ZCVT(chap,"O","URL"))##("#"_key)#'>#(label _ "." _ num)# #(title)#</A></br>>
+		&sql(FETCH S2Cursor)
+		Set num = num + 1
+	}
+	Write "</div>",!
+	&sql(CLOSE S2Cursor)
+]]></Implementation>
+</Method>
+
+<Method name="ShowRefEntries">
+<Internal>1</Internal>
+<FormalSpec>id:id</FormalSpec>
+<Implementation><![CDATA[
+	&sql(DECLARE RECursor CURSOR FOR
+		SELECT %ID,blockid, refmeta_refentrytitle
+		INTO :eid,:key, :title
+		FROM refentry
+		WHERE container = :id
+		ORDER BY blockpos
+	)
+	&sql(OPEN RECursor)
+	&sql(FETCH RECursor)
+	Set last = ""
+	Write "<div>",!
+	While (SQLCODE = 0) {
+		
+		// find refpurpose for this entry
+		Set purpose = ""
+		&sql(SELECT content INTO :purpose FROM refpurpose WHERE component = :eid)
+		
+		// look at first letter of string
+		Set c = $ZCONVERT($E(title,1,1), "U")
+		If ((c '= last)) {
+			// special banner for start of new letter
+			// No longer emitted
+			// <TR><TD ALIGN="LEFT" CLASS="Letter">&#151; #(c)# &#151;</TD></TR>
+		}
+		Set last = c
+		
+		Set href = "DocBook.UI.Page.cls?KEY=" _ $ZCVT(key,"O","URL")
+		
+		//!!! (make it easier to find missing titles)
+		Set:title="" title = "[" _ key _ "] (untitled)"
+		
+		Set purpose = ##class(DocBook.Renderer).FilterText(purpose)
+		// add mdash
+		Set:purpose'="" purpose = "&nbsp;&#151;&nbsp;" _ purpose
+		
+		&html<<A CLASS="TOCRef" HREF='#(href)#'>#(title)#</A><SPAN CLASS="TOCrefpurpose">#(purpose)#</SPAN></br>>
+		// no longer emitted
+		// <TR><TD ALIGN="LEFT"><DIV CLASS="TOC"><A CLASS="TOCRef" HREF='#(href)#'>#(title)#</A></DIV></TD></TR>
+		
+		&sql(FETCH RECursor)
+	}
+	Write "</div>",!
+	&sql(CLOSE RECursor)
+]]></Implementation>
+</Method>
+
+<Storage name="Default">
+<Type>%Library.CacheStorage</Type>
+<DefaultData>bookDefaultData</DefaultData>
+<ExtentSize>150</ExtentSize>
+<Data name="bookDefaultData">
+<Subscript>"book"</Subscript>
+<Value name="1">
+<Value>set</Value>
+</Value>
+</Data>
+<Property name="%%CLASSNAME">
+<Selectivity>100.0000%</Selectivity>
+<AverageFieldSize>32</AverageFieldSize>
+</Property>
+<Property name="%%ID">
+<Selectivity>1</Selectivity>
+<AverageFieldSize>2.35</AverageFieldSize>
+</Property>
+<Property name="NearestLevel1">
+<Selectivity>0.6667%</Selectivity>
+<AverageFieldSize>2.35</AverageFieldSize>
+</Property>
+<Property name="NearestLevel2">
+<Selectivity>0.9259%</Selectivity>
+<AverageFieldSize>2.12</AverageFieldSize>
+</Property>
+<Property name="NearestLevel3">
+<Selectivity>0.9259%</Selectivity>
+<AverageFieldSize>2.12</AverageFieldSize>
+</Property>
+<Property name="Rank">
+<Selectivity>8.3333%</Selectivity>
+<AverageFieldSize>3.42</AverageFieldSize>
+</Property>
+<Property name="RenderedTitle">
+<Selectivity>0.6667%</Selectivity>
+<AverageFieldSize>30.15</AverageFieldSize>
+</Property>
+<Property name="Searchable">
+<Selectivity>100.0000%</Selectivity>
+<AverageFieldSize>1</AverageFieldSize>
+</Property>
+<Property name="TopId">
+<Selectivity>0.6667%</Selectivity>
+<AverageFieldSize>4.41</AverageFieldSize>
+</Property>
+<Property name="blockpos">
+<Selectivity>6.2500%</Selectivity>
+<AverageFieldSize>1.14</AverageFieldSize>
+</Property>
+<Property name="book">
+<Selectivity>100.0000%</Selectivity>
+<AverageFieldSize>1</AverageFieldSize>
+</Property>
+<Property name="component">
+<Selectivity>100.0000%</Selectivity>
+<AverageFieldSize>1</AverageFieldSize>
+</Property>
+<Property name="container">
+<Selectivity>5.2632%</Selectivity>
+<AverageFieldSize>2.28</AverageFieldSize>
+</Property>
+<Property name="content">
+<Selectivity>100.0000%</Selectivity>
+<AverageFieldSize>1</AverageFieldSize>
+</Property>
+<Property name="extraTags">
+<Selectivity>1.4259%</Selectivity>
+<OutlierSelectivity>.486667:</OutlierSelectivity>
+<AverageFieldSize>6.35</AverageFieldSize>
+</Property>
+<Property name="id">
+<Selectivity>1</Selectivity>
+<AverageFieldSize>4.41</AverageFieldSize>
+</Property>
+<Property name="lang">
+<Selectivity>100.0000%</Selectivity>
+<AverageFieldSize>1</AverageFieldSize>
+</Property>
+<Property name="lastChildPos">
+<Selectivity>4.1667%</Selectivity>
+<AverageFieldSize>1.33</AverageFieldSize>
+</Property>
+<Property name="lastchange">
+<Selectivity>1.7241%</Selectivity>
+<AverageFieldSize>19</AverageFieldSize>
+</Property>
+<Property name="product">
+<Selectivity>33.3333%</Selectivity>
+<AverageFieldSize>6.02</AverageFieldSize>
+</Property>
+<Property name="remap">
+<Selectivity>0.6667%</Selectivity>
+<AverageFieldSize>12.4</AverageFieldSize>
+</Property>
+<Property name="renderedContent">
+<Selectivity>100.0000%</Selectivity>
+<AverageFieldSize>1</AverageFieldSize>
+</Property>
+<Property name="role">
+<Selectivity>100.0000%</Selectivity>
+<AverageFieldSize>1</AverageFieldSize>
+</Property>
+<Property name="set">
+<Selectivity>5.2632%</Selectivity>
+<AverageFieldSize>2.28</AverageFieldSize>
+</Property>
+<Property name="sourcefile">
+<Selectivity>0.6667%</Selectivity>
+<AverageFieldSize>8.41</AverageFieldSize>
+</Property>
+<Property name="sourcetime">
+<Selectivity>16.6667%</Selectivity>
+<AverageFieldSize>19</AverageFieldSize>
+</Property>
+<Property name="status">
+<Selectivity>2.0000%</Selectivity>
+<OutlierSelectivity>.98:</OutlierSelectivity>
+<AverageFieldSize>.12</AverageFieldSize>
+</Property>
+<Property name="subtitle">
+<Selectivity>0.6667%</Selectivity>
+<AverageFieldSize>89.72</AverageFieldSize>
+</Property>
+<Property name="tagattrs">
+<Selectivity>0.6667%</Selectivity>
+<AverageFieldSize>109.05</AverageFieldSize>
+</Property>
+<Property name="title">
+<Selectivity>0.6667%</Selectivity>
+<AverageFieldSize>33.64</AverageFieldSize>
+</Property>
+<SQLMap name="$book">
+<BlockCount>-4</BlockCount>
+</SQLMap>
+<SQLMap name="setIdx">
+<BlockCount>-4</BlockCount>
+</SQLMap>
+</Storage>
+</Class>
+
+
+<Class name="DocBook.refdescriptor">
+<Description>
+The name of the contents of a refentry.</Description>
+<ClassType>persistent</ClassType>
+<IncludeCode>DocBookMac</IncludeCode>
+<ProcedureBlock>1</ProcedureBlock>
+<Super>DocBook.block</Super>
+<TimeChanged>65254,45920</TimeChanged>
+<TimeCreated>58696,41768</TimeCreated>
+
+<Method name="HTMLRenderContent">
+<Description>
+Render the contents of this block</Description>
+<Internal>1</Internal>
+<Implementation><![CDATA[
+	quit:($LENGTH($ZSTRIP(..content, "<>W")) = 0)
+	Write "<DIV CLASS=""refdescriptor"">"
+	Write ..content
+	Write "</DIV>",!
+]]></Implementation>
+</Method>
+
+<Storage name="Default">
+<Type>%Library.CacheStorage</Type>
+</Storage>
+</Class>
+</Export>
