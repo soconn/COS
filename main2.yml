@@ -3,13 +3,7 @@
 - hosts: "HS_SERVER"
   become: true
   tasks:
-    - name: Create Directory for scripts
-      file: path=/Healthshare/src
-        mode=0775
-        state=directory
-
-# Copy Scripts to target Directory
-    - name: Copy code to src Directory
+    - name: "Copy code to src Directory"
       copy: 
         src: /home/jenkins/agent/workspace/Scan_Project_Git_CodeDeploy
         dest: /Healthshare/src
