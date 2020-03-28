@@ -1,0 +1,6 @@
+---
+#"Scan Project Ansible Playbook
+- hosts: "ec2-52-13-188-193.us-west-2.compute.amazonaws.com"
+  become: true
+  tasks:
+    - import_tasks: "tasks/copy.yml"
