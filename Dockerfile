@@ -19,6 +19,7 @@ RUN iris start $ISC_PACKAGE_INSTANCENAME quietly EmergencyId=sys,sys && \
             " Do ##class(Security.System).Modify(,.p)\n" \
             " Do \$system.OBJ.Load(\"/opt/app/src/*\",\"ck\")\n" \
             " If 'sc do \$zu(4, \$JOB, 1)\n" \
+            " w ##class(Application.Tests).RunUnitTests()" \
             " write $zv" \
             " h" \
     | iris session $ISC_PACKAGE_INSTANCENAME && \
