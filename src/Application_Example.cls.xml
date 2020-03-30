@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Export generator="Cache" version="25">
+<Class name="Application.Example">
+<Super>%RegisteredObject</Super>
+<TimeCreated>65276,41960.909636</TimeCreated>
+
+<Method name="PhoneValidator">
+<ClassMethod>1</ClassMethod>
+<FormalSpec>pPhoneNumber:%String</FormalSpec>
+<ReturnType>%Boolean</ReturnType>
+<Implementation><![CDATA[
+	#; Simple example method that returns 1 (true) if a phone number is in a valid format.
+	set tValid=0
+	
+	;#Format #######
+	if pPhoneNumber?7N set tValid=1
+	
+	;#Format ###-#####
+	if pPhoneNumber?3N1"-"4N set tValid=1
+	
+	;#Format ###-###-####
+	if pPhoneNumber?3N1"-"3N1"-"4N set tValid=1
+		
+	quit tValid
+]]></Implementation>
+</Method>
+</Class>
+</Export>
