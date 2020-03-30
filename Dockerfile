@@ -17,6 +17,7 @@ RUN iris start $ISC_PACKAGE_INSTANCENAME quietly EmergencyId=sys,sys && \
             " Do ##class(Security.System).Get(,.p)\n" \
             " Set p(\"AutheEnabled\")=\$zb(p(\"AutheEnabled\"),16,7)\n" \
             " Do ##class(Security.System).Modify(,.p)\n" \
+            " zn \"USER\"" \
             " Do \$system.OBJ.Load(\"/opt/app/src/*\",\"ck\")\n" \
             " write ##class(Application.Tests).RunUnitTests()" \
             " write $zv" \
