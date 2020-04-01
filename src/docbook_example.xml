@@ -7,6 +7,8 @@ Utility class</Description>
 <Super>%Library.RegisteredObject</Super>
 <TimeChanged>65254,45920</TimeChanged>
 <TimeCreated>58822,45005</TimeCreated>
+	
+	////
 
 <Method name="Help">
 <Internal>1</Internal>
