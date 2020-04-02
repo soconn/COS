@@ -46,7 +46,7 @@
 	quit tStatus
 ]]></Implementation>
 </Method>
-
+/// THis is a comment
 <Method name="Assert">
 <ClassMethod>1</ClassMethod>
 <FormalSpec>pPhoneNumber:%String,pExpectedResult:%Boolean,pMessage:%String</FormalSpec>
