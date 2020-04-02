@@ -1,0 +1,12 @@
+---
+#"Scan Project Ansible Playbook
+- hosts: "HS_SERVER"
+  become: true
+  tasks:
+    - name: "Copy code to src Directory"
+      copy: 
+        src: /home/jenkins/agent/workspace/Scan_Project_Git_CodeDeploy
+        dest: /Healthshare/src
+        group: cacheusr
+        owner: cachegrp
+        mode: '0755'
